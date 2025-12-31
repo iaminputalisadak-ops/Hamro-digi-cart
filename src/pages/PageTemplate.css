@@ -1,0 +1,128 @@
+.page-template {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 3rem 1.5rem;
+}
+
+.page-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.page-container h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 2rem 0;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.page-content {
+  color: #4b5563;
+  line-height: 1.8;
+}
+
+.page-content p {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.1rem;
+}
+
+.page-content h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 2rem 0 1rem 0;
+}
+
+.page-content ul {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.page-content li {
+  margin: 0.75rem 0;
+  font-size: 1.05rem;
+}
+
+.contact-form {
+  margin-top: 2rem;
+}
+
+.contact-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.contact-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.contact-form input,
+.contact-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.3s;
+  box-sizing: border-box;
+}
+
+.contact-form input:focus,
+.contact-form textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+}
+
+.contact-form textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.btn-submit {
+  background: #22c55e;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.btn-submit:hover {
+  background: #16a34a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .page-template {
+    padding: 2rem 1rem;
+  }
+
+  .page-container {
+    padding: 2rem 1.5rem;
+  }
+
+  .page-container h1 {
+    font-size: 2rem;
+  }
+
+  .page-content h2 {
+    font-size: 1.5rem;
+  }
+}
+

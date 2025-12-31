@@ -1,0 +1,110 @@
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo-container.logo-header {
+  flex-direction: row;
+}
+
+.logo-container.logo-footer {
+  flex-direction: row;
+  align-items: center;
+}
+
+.logo-image {
+  flex-shrink: 0;
+  display: block;
+  object-fit: contain;
+}
+
+.logo-text-container {
+  display: flex;
+  line-height: 1.2;
+}
+
+.logo-text-container.logo-text-header {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.logo-text-container.logo-text-header .logo-text-line1,
+.logo-text-container.logo-text-header .logo-text-line2 {
+  display: inline;
+}
+
+.logo-text-container.logo-text-footer {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.logo-text-line1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  font-family: Arial, sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.logo-text-line2 {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: white;
+  font-family: Arial, sans-serif;
+  letter-spacing: 1px;
+}
+
+.logo-small .logo-text-line1 {
+  font-size: 1.4rem;
+}
+
+.logo-small .logo-text-line2 {
+  font-size: 1.6rem;
+}
+
+.logo-default .logo-text-line1 {
+  font-size: 1.6rem;
+}
+
+.logo-default .logo-text-line2 {
+  font-size: 1.8rem;
+}
+
+.logo-large .logo-text-line1 {
+  font-size: 2rem;
+}
+
+.logo-large .logo-text-line2 {
+  font-size: 2.4rem;
+}
+
+/* Header logo - black text */
+.logo-header .logo-text-line1 {
+  color: #000000;
+}
+
+.logo-header .logo-text-line2 {
+  color: #000000;
+}
+
+/* Footer logo - white text */
+.logo-footer .logo-text-line1 {
+  color: white;
+}
+
+.logo-footer .logo-text-line2 {
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .logo-text-line1 {
+    font-size: 0.95rem;
+  }
+
+  .logo-text-line2 {
+    font-size: 1.1rem;
+  }
+}

@@ -1,0 +1,10 @@
+# Allow access to uploaded files
+Options +Indexes
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+</IfModule>
+
+
+
+
+

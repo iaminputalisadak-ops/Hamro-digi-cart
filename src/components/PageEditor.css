@@ -1,0 +1,44 @@
+/* CKEditor Styles */
+.page-editor-content .ck-editor__editable {
+  min-height: 400px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.page-editor-content .ck-editor {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.page-editor-content .ck-editor__main {
+  border-radius: 8px;
+}
+
+.page-editor-content .ck-toolbar {
+  border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.page-editor-content .ck-editor__editable {
+  border-radius: 0 0 8px 8px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .page-editor-modal {
+    max-width: 95%;
+    margin: 1rem;
+  }
+
+  .page-editor-header,
+  .page-editor-content,
+  .page-editor-actions {
+    padding: 1rem;
+  }
+
+  .page-editor-content .ck-editor__editable {
+    min-height: 300px;
+    max-height: 50vh;
+  }
+}
+
