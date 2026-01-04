@@ -20,6 +20,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'product_card_promotional_text' => $_POST['product_card_promotional_text'] ?? '',
             'product_card_show_price' => isset($_POST['product_card_show_price']) ? '1' : '0',
             'product_card_price_label' => $_POST['product_card_price_label'] ?? '',
+            // Product Details Page Settings
+            'product_details_button_text' => $_POST['product_details_button_text'] ?? 'Download',
+            'product_details_description_title' => $_POST['product_details_description_title'] ?? '{title} - Fun, Viral & Engaging!',
+            'product_details_related_title' => $_POST['product_details_related_title'] ?? 'Get Epic Viral Instagram Reels Bundle For Better Video Content',
+            'product_details_ad_title' => $_POST['product_details_ad_title'] ?? 'Amazon Month of the SALE',
+            'product_details_ad_description' => $_POST['product_details_ad_description'] ?? 'Special offers and discounts',
+            'product_details_features' => $_POST['product_details_features'] ?? "✓ No Logo\n✓ Lifetime Access\n📁 Google Drive Link\n📥 Easy To Download\n✓ No Watermark\n⚡ Instant Download",
+            'product_details_default_tags' => $_POST['product_details_default_tags'] ?? 'Skilcart,Reels Kit,Instagram Reels Bundle,Viral Reels Bundle,Animation reels bundle,AI reels bundle,Free download',
         ];
         
         foreach ($settings as $key => $value) {
@@ -36,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Load existing settings
-$stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'product_card_%'");
+$stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'product_card_%' OR setting_key LIKE 'product_details_%'");
 $settingsData = $stmt->fetchAll();
 $settings = [];
 foreach ($settingsData as $row) {
@@ -49,7 +57,9 @@ foreach ($settingsData as $row) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Card Settings - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
+    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 </head>
 <body>
     <div class="admin-wrapper">
@@ -131,8 +141,8 @@ foreach ($settingsData as $row) {
                         <div style="padding: 20px;">
                             <div class="form-group">
                                 <label>Default Description Template</label>
-                                <textarea name="product_card_default_description" rows="4" placeholder="Enter default description template (leave empty to use product description)"><?php echo htmlspecialchars($settings['product_card_default_description'] ?? ''); ?></textarea>
-                                <small style="color: #666;">Default description shown if product doesn't have a description. Use {title} to insert product title.</small>
+                                <textarea id="product_card_default_description" name="product_card_default_description" rows="6" placeholder="Enter default description template (leave empty to use product description)"><?php echo htmlspecialchars($settings['product_card_default_description'] ?? ''); ?></textarea>
+                                <small style="color: #666;">Default description shown if product doesn't have a description. Use {title} to insert product title. Use the rich text editor to format your description with bold, italic, lists, links, and more.</small>
                             </div>
                             
                             <div class="form-group">
@@ -161,6 +171,54 @@ foreach ($settingsData as $row) {
                         </div>
                     </div>
                     
+                    <!-- Product Details Page Settings -->
+                    <div class="data-table" style="margin-bottom: 30px;">
+                        <h2 style="margin-bottom: 20px; padding: 20px 20px 0;">📄 Product Details Page Settings</h2>
+                        <div style="padding: 20px;">
+                            <div class="form-group">
+                                <label>Download Button Text</label>
+                                <input type="text" name="product_details_button_text" value="<?php echo htmlspecialchars($settings['product_details_button_text'] ?? 'Download'); ?>" placeholder="Download">
+                                <small style="color: #666;">Text on the download button on product details page</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Description Section Title Format</label>
+                                <input type="text" name="product_details_description_title" value="<?php echo htmlspecialchars($settings['product_details_description_title'] ?? '{title} - Fun, Viral & Engaging!'); ?>" placeholder="{title} - Fun, Viral & Engaging!">
+                                <small style="color: #666;">Use {title} to insert product title. Example: "{title} - Fun, Viral & Engaging!"</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Related Bundles Section Title</label>
+                                <input type="text" name="product_details_related_title" value="<?php echo htmlspecialchars($settings['product_details_related_title'] ?? 'Get Epic Viral Instagram Reels Bundle For Better Video Content'); ?>" placeholder="Get Epic Viral Instagram Reels Bundle For Better Video Content">
+                                <small style="color: #666;">Title for the related products section in sidebar</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Advertisement Box Title</label>
+                                <input type="text" name="product_details_ad_title" value="<?php echo htmlspecialchars($settings['product_details_ad_title'] ?? 'Amazon Month of the SALE'); ?>" placeholder="Amazon Month of the SALE">
+                                <small style="color: #666;">Title for the advertisement box in sidebar</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Advertisement Box Description</label>
+                                <input type="text" name="product_details_ad_description" value="<?php echo htmlspecialchars($settings['product_details_ad_description'] ?? 'Special offers and discounts'); ?>" placeholder="Special offers and discounts">
+                                <small style="color: #666;">Description text for the advertisement box</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Product Features (One per line)</label>
+                                <textarea name="product_details_features" rows="8" placeholder="✓ No Logo&#10;✓ Lifetime Access&#10;📁 Google Drive Link&#10;📥 Easy To Download&#10;✓ No Watermark&#10;⚡ Instant Download"><?php echo htmlspecialchars($settings['product_details_features'] ?? "✓ No Logo\n✓ Lifetime Access\n📁 Google Drive Link\n📥 Easy To Download\n✓ No Watermark\n⚡ Instant Download"); ?></textarea>
+                                <small style="color: #666;">Enter features, one per line. First character/emoji will be used as icon, rest as text. Example: "✓ No Logo" or "📁 Google Drive Link"</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Default Tags (Comma separated)</label>
+                                <input type="text" name="product_details_default_tags" value="<?php echo htmlspecialchars($settings['product_details_default_tags'] ?? 'Skilcart,Reels Kit,Instagram Reels Bundle,Viral Reels Bundle,Animation reels bundle,AI reels bundle,Free download'); ?>" placeholder="Skilcart,Reels Kit,Instagram Reels Bundle">
+                                <small style="color: #666;">Default tags to show on product details page (comma separated). Product category will be added automatically.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="action-buttons" style="padding: 20px;">
                         <button type="submit" class="btn btn-primary">💾 Save Product Card Settings</button>
                     </div>
@@ -170,6 +228,49 @@ foreach ($settingsData as $row) {
     </div>
     
     <script src="assets/admin.js"></script>
+    <script>
+        let descriptionEditor;
+        
+        // Initialize CKEditor for Default Description Template
+        ClassicEditor
+            .create(document.querySelector('#product_card_default_description'), {
+                toolbar: {
+                    items: [
+                        'heading', '|',
+                        'bold', 'italic', 'link', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'blockQuote', 'insertTable', '|',
+                        'undo', 'redo'
+                    ]
+                },
+                heading: {
+                    options: [
+                        { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                        { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                        { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                        { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+                    ]
+                }
+            })
+            .then(editor => {
+                descriptionEditor = editor;
+                console.log('CKEditor initialized successfully for Default Description Template');
+            })
+            .catch(error => {
+                console.error('Error initializing CKEditor:', error);
+            });
+        
+        // Handle form submission - get data from CKEditor
+        document.getElementById('productCardSettingsForm').addEventListener('submit', function(e) {
+            // Get content from CKEditor if available
+            if (descriptionEditor) {
+                const editorData = descriptionEditor.getData();
+                // Update the textarea value with CKEditor content
+                document.getElementById('product_card_default_description').value = editorData;
+            }
+            // Form will submit normally
+        });
+    </script>
 </body>
 </html>
 

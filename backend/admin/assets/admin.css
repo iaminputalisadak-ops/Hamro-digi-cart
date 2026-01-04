@@ -145,6 +145,44 @@ body {
 .stat-info p {
     color: #7f8c8d;
     font-size: 14px;
+    margin: 0;
+}
+
+.stat-info small {
+    color: #95a5a6;
+    font-size: 12px;
+    display: block;
+    margin-top: 4px;
+}
+
+.purchase-amounts-section {
+    margin: 40px 0;
+}
+
+.purchase-amounts-section h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+.purchase-card {
+    border-left: 4px solid #3498db;
+}
+
+.purchase-card:nth-child(1) {
+    border-left-color: #27ae60;
+}
+
+.purchase-card:nth-child(2) {
+    border-left-color: #3498db;
+}
+
+.purchase-card:nth-child(3) {
+    border-left-color: #9b59b6;
+}
+
+.purchase-card:nth-child(4) {
+    border-left-color: #e67e22;
 }
 
 /* Tables */
@@ -255,6 +293,12 @@ body {
     font-family: inherit;
 }
 
+.form-group input[type="checkbox"],
+.form-group input[type="radio"] {
+    width: auto;
+    padding: 0;
+}
+
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
@@ -285,7 +329,7 @@ body {
     background: white;
     border-radius: 10px;
     padding: 30px;
-    max-width: 600px;
+    max-width: 900px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
@@ -308,6 +352,32 @@ body {
     font-size: 24px;
     cursor: pointer;
     color: #7f8c8d;
+}
+
+/* CKEditor Styles */
+.ck-editor__editable {
+    min-height: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.ck.ck-editor {
+    margin-top: 0.5rem;
+}
+
+.ck.ck-toolbar {
+    border: 2px solid #e0e0e0;
+    border-bottom: none;
+}
+
+.ck.ck-editor__editable {
+    border: 2px solid #e0e0e0;
+    border-top: none;
+}
+
+.ck.ck-editor__editable:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 /* Status Badges */
@@ -393,20 +463,442 @@ body {
     border-bottom: none;
 }
 
-/* Responsive */
+/* Mobile Menu Toggle Button */
+.mobile-menu-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin-right: 15px;
+}
+
+.mobile-menu-toggle span {
+    width: 25px;
+    height: 3px;
+    background: #2c3e50;
+    border-radius: 3px;
+    transition: all 0.3s;
+}
+
+.mobile-menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.mobile-menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.mobile-menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+}
+
+/* Mobile Overlay */
+.mobile-sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+}
+
+.mobile-sidebar-overlay.active {
+    display: block;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+    .admin-content {
+        padding: 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .data-table {
+        overflow-x: auto;
+    }
+    
+    .data-table table {
+        min-width: 600px;
+    }
+}
+
 @media (max-width: 768px) {
+    /* Mobile Menu Toggle */
+    .mobile-menu-toggle {
+        display: flex;
+    }
+    
+    /* Sidebar - Hidden by default on mobile */
     .admin-sidebar {
+        width: 280px;
+        position: fixed;
+        left: -280px;
+        top: 0;
+        z-index: 999;
+        transition: left 0.3s ease;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .admin-sidebar.active {
+        left: 0;
+    }
+    
+    /* Main Content */
+    .admin-main {
+        margin-left: 0;
         width: 100%;
-        height: auto;
-        position: relative;
+    }
+    
+    /* Header */
+    .admin-header {
+        padding: 15px 20px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .admin-header h1 {
+        font-size: 18px;
+        flex: 1;
+    }
+    
+    .header-right {
+        display: flex;
+        align-items: center;
+    }
+    
+    .welcome-text {
+        font-size: 14px;
+        display: none; /* Hide on very small screens */
+    }
+    
+    /* Content */
+    .admin-content {
+        padding: 15px;
+    }
+    
+    .admin-content h1 {
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        padding: 18px;
+        gap: 15px;
+    }
+    
+    .stat-icon {
+        font-size: 32px;
+    }
+    
+    .stat-info h3 {
+        font-size: 24px;
+    }
+    
+    .stat-info p {
+        font-size: 13px;
+    }
+    
+    /* Tables - Make scrollable */
+    .data-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .data-table table {
+        min-width: 700px;
+        font-size: 14px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 12px 10px;
+        font-size: 13px;
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    
+    .btn {
+        padding: 8px 15px;
+        font-size: 13px;
+    }
+    
+    .btn-small {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    
+    /* Forms */
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        font-size: 14px;
+        margin-bottom: 6px;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    /* Modal */
+    .modal {
+        padding: 20px;
+        width: 95%;
+        max-height: 85vh;
+        margin: 10px;
+    }
+    
+    .modal-header h2 {
+        font-size: 20px;
+    }
+    
+    .ck-editor__editable {
+        min-height: 150px;
+        max-height: 300px;
+    }
+    
+    .ck.ck-toolbar {
+        flex-wrap: wrap;
+    }
+    
+    /* Page Header */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .page-header h1 {
+        font-size: 22px;
+    }
+    
+    /* Recent Orders */
+    .recent-orders {
+        padding: 18px;
+        margin-top: 20px;
+    }
+    
+    .recent-orders h2 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    
+    .order-item {
+        padding: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .order-item strong {
+        font-size: 14px;
+    }
+    
+    /* Status Badges */
+    .status-badge {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-header {
+        padding: 12px 15px;
+    }
+    
+    .admin-header h1 {
+        font-size: 16px;
+    }
+    
+    .admin-content {
+        padding: 12px;
+    }
+    
+    .admin-content h1 {
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
+    
+    .stat-card {
+        padding: 15px;
+        gap: 12px;
+    }
+    
+    .stat-icon {
+        font-size: 28px;
+    }
+    
+    .stat-info h3 {
+        font-size: 20px;
+    }
+    
+    .stat-info p {
+        font-size: 12px;
+    }
+    
+    .data-table table {
+        min-width: 600px;
+        font-size: 12px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+    
+    .btn {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+    
+    .modal {
+        padding: 15px;
+        width: 98%;
+    }
+    
+    .modal-header h2 {
+        font-size: 18px;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        padding: 8px;
+        font-size: 14px;
+    }
+    
+    .page-header h1 {
+        font-size: 20px;
+    }
+    
+    .recent-orders {
+        padding: 15px;
+    }
+    
+    .recent-orders h2 {
+        font-size: 16px;
+    }
+    
+    /* Image preview adjustments */
+    #imagePreview {
+        width: 100px !important;
+        height: 100px !important;
+        margin-top: 10px;
+    }
+    
+    /* File input adjustments */
+    input[type="file"] {
+        font-size: 14px !important;
+    }
+    
+    /* Form layout adjustments */
+    .form-group > div {
+        flex-direction: column !important;
+    }
+    
+    /* Table image cells */
+    .data-table img {
+        max-width: 40px;
+        max-height: 40px;
+    }
+}
+
+/* Additional mobile utilities */
+@media (max-width: 768px) {
+    /* Hide less important columns on very small screens */
+    .data-table th:nth-child(1),
+    .data-table td:nth-child(1) {
+        display: none; /* Hide ID column */
+    }
+    
+    /* Make action buttons stack vertically */
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .action-buttons .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    /* Better spacing for form groups */
+    .form-group {
+        margin-bottom: 18px;
+    }
+    
+    /* Modal form improvements */
+    .modal form {
+        padding: 0;
+    }
+    
+    /* Sidebar improvements */
+    .sidebar-nav a {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+    
+    .sidebar-header {
+        padding: 15px;
+    }
+    
+    .sidebar-header h2 {
+        font-size: 18px;
+    }
+    
+    .sidebar-header p {
+        font-size: 11px;
+    }
+    
+    .sidebar-footer {
+        padding: 15px;
+    }
+    
+    .logout-btn {
+        padding: 12px;
+        font-size: 14px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .admin-sidebar,
+    .admin-header,
+    .mobile-menu-toggle,
+    .action-buttons {
+        display: none;
     }
     
     .admin-main {
         margin-left: 0;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
     }
 }
 

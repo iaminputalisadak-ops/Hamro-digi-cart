@@ -1,6 +1,6 @@
 // Product Service - Fetches products from PHP API
 
-import API_BASE_URL, { apiRequest } from '../config/api';
+import { apiRequest } from '../config/api';
 
 /**
  * Fetch all products from the API
@@ -78,6 +78,29 @@ export const fetchProductsByCategory = async (categoryName) => {
     return [];
   } catch (error) {
     console.error('Error fetching products by category:', error);
+    return [];
+  }
+};
+
+/**
+ * Get search suggestions (autocomplete)
+ * @param {string} query - Search query string (partial)
+ * @param {number} limit - Maximum number of suggestions to return
+ * @returns {Promise<Array>} Array of suggestion objects with id, title, and category
+ */
+export const getSearchSuggestions = async (query, limit = 10) => {
+  try {
+    if (!query || !query.trim() || query.trim().length < 2) {
+      return [];
+    }
+
+    const data = await apiRequest(`products.php?suggest=${encodeURIComponent(query)}&limit=${limit}`);
+    if (data.success) {
+      return data.data || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching search suggestions:', error);
     return [];
   }
 };
@@ -161,7 +184,12 @@ export const submitOrder = async (orderData) => {
         // Return order in format expected by frontend
         return {
           id: data.data.id,
-          ...apiOrderData,
+          productId: apiOrderData.product_id,
+          productTitle: orderData.productTitle || orderData.product_title || '',
+          customerEmail: apiOrderData.customer_email,
+          customerPhone: apiOrderData.customer_phone || '',
+          totalAmount: apiOrderData.total_amount, // Include totalAmount for OrderSuccess page
+          total_amount: apiOrderData.total_amount, // Keep snake_case for compatibility
           status: 'pending',
           date: new Date().toLocaleString()
         };
@@ -223,14 +251,14 @@ export const fetchPaymentQRCode = async () => {
  * @returns {Function} Cleanup function to stop polling
  */
 export const subscribeToProductUpdates = (callback) => {
-  // Poll every 15 seconds for faster updates when admin adds products
+  // Poll every 30 seconds (reduced from 15s for better performance)
   const intervalId = setInterval(async () => {
     try {
       await callback();
     } catch (error) {
       console.error('Error in product update subscription:', error);
     }
-  }, 15000);
+  }, 30000);
 
   // Return cleanup function
   return () => {

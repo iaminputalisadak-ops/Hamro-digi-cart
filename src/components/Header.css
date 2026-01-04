@@ -1,8 +1,20 @@
-.main-header {
-  background-color: #22c55e;
-  color: white;
-  padding: 0.5rem 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* Main Top Header - At Top */
+.admin-top-header {
+  background-color: #dcfce7; /* Light green background like image */
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: fixed; /* constant on both desktop and mobile */
+  top: 50px; /* sits directly under the fixed navbar */
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  display: block;
+  margin: 0;
+  /* IMPORTANT: keep overflow visible so autosuggest dropdown isn't clipped */
+  overflow: visible;
+  width: 100%;
+  max-width: 100vw;
 }
 
 .header-container {
@@ -12,6 +24,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
+  gap: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  /* allow dropdown to extend over page content */
+  overflow: visible;
 }
 
 .logo-link {
@@ -19,6 +36,116 @@
   align-items: center;
   text-decoration: none;
   color: inherit;
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-shrink: 0;
+}
+
+.header-center {
+  flex: 1;
+  max-width: 500px;
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2000; /* ensure dropdown stays above banners */
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+.header-nav {
+  display: flex;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+.header-nav-link {
+  color: #4b5563; /* Dark gray like image */
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+
+.header-nav-link:hover {
+  color: #22c55e;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.search-box > svg:first-child {
+  color: #22c55e; /* Light green icon inside search box */
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-submit-button {
+  background: #15803d; /* Dark green square button like image */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+}
+
+.search-submit-button:hover {
+  background: #166534;
+}
+
+.search-submit-button svg {
+  color: white;
+  width: 18px;
+  height: 18px;
+}
+
+.main-header {
+  background-color: #22c55e;
+  color: white;
+  padding: 0.5rem 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .main-nav {
@@ -99,10 +226,26 @@
   line-height: 1;
 }
 
+.secondary-nav-wrapper {
+  position: fixed;
+  top: 0; /* Fixed navbar at top */
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  width: 100%;
+  background-color: #15803d; /* Dark green background like image */
+  height: 50px; /* fixed height to avoid gaps */
+  display: block;
+}
+
 .secondary-nav {
-  background-color: #16a34a;
-  padding: 0.3rem 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #15803d; /* Dark green background like image */
+  padding: 0; /* fixed height handles spacing */
+  /* Remove shadow so there's no visible “gap” between navbar and header below */
+  box-shadow: none;
+  width: 100%;
+  display: block;
+  height: 50px;
 }
 
 .secondary-nav-container {
@@ -110,10 +253,12 @@
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2rem;
   padding: 0 1.5rem;
   overflow-x: auto;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  height: 50px;
 }
 
 .secondary-nav-container::-webkit-scrollbar {
@@ -123,13 +268,17 @@
 .secondary-nav a {
   color: white;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 500;
   white-space: nowrap;
   transition: opacity 0.3s;
+  padding: 0.25rem 0;
+  display: inline-block;
 }
 
 .secondary-nav a:hover {
-  opacity: 0.8;
+  opacity: 0.9;
+  text-decoration: underline;
 }
 
 .dropdown {
@@ -145,9 +294,128 @@
 }
 
 /* Mobile Responsive */
+
 @media (max-width: 768px) {
+  .admin-top-header {
+    padding: 0.75rem 0;
+  }
+  
+  .secondary-nav-wrapper {
+    top: 0; /* Fixed navbar at top on mobile too */
+    height: 50px; /* keep single-row navbar */
+  }
+  
+  .secondary-nav {
+    height: 50px; /* keep single-row navbar */
+    padding: 0;
+  }
+  
+  /* Mobile: single horizontal row with smooth scroll if needed */
+  .secondary-nav-container {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1.25rem;
+    padding: 0 1rem;
+    height: 50px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  .secondary-nav a {
+    font-size: 0.95rem; /* readable but compact */
+    font-weight: 700;
+    white-space: nowrap;
+    padding: 0.25rem 0;
+  }
+
   .header-container {
     padding: 0 1rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .logo-link {
+    order: 1;
+    flex: 0 0 auto;
+    max-width: calc(100% - 120px);
+  }
+
+  .header-nav {
+    order: 3;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(34, 197, 94, 0.2);
+    margin-top: 0.5rem;
+  }
+
+  .header-center {
+    order: 2;
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    max-width: none;
+  }
+
+  .header-nav-link {
+    font-size: 0.85rem;
+  }
+
+  .search-box {
+    padding: 0.4rem 0.75rem;
+    min-width: 200px;
+    max-width: 100%;
+  }
+
+  .search-input {
+    font-size: 0.85rem;
+    min-width: 120px;
+  }
+
+  /* Mobile header layout: center logo + name, search below */
+  .admin-top-header .header-container {
+    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .admin-top-header .logo-link {
+    order: 1;
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  .admin-top-header .logo-text-container.logo-text-header {
+    align-items: center;
+    text-align: center;
+  }
+
+  .admin-top-header .logo-text-line1,
+  .admin-top-header .logo-text-line2 {
+    text-align: center;
+  }
+
+  .admin-top-header .header-center {
+    order: 2;
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .admin-top-header .search-box {
+    width: 100%;
+    max-width: 520px;
   }
 
   .main-nav {
@@ -166,12 +434,11 @@
   }
 
   .secondary-nav {
-    padding: 0.25rem 0;
+    padding: 0; /* keep height consistent */
   }
 
   .secondary-nav-container {
-    gap: 1rem;
-    padding: 0 1rem;
+    padding: 0 2rem 0 1rem; /* extra right padding so last item isn't tight */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
@@ -182,9 +449,14 @@
   }
 
   .secondary-nav a {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 700;
     white-space: nowrap;
     padding: 0.25rem 0;
+  }
+
+  .secondary-nav-container::-webkit-scrollbar {
+    display: none;
   }
 
   .dropdown {
@@ -198,12 +470,46 @@
 }
 
 @media (max-width: 480px) {
-  .secondary-nav-container {
-    gap: 0.875rem;
+  .admin-top-header {
+    padding: 0.5rem 0;
+  }
+
+  .header-container {
     padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .logo-link {
+    max-width: calc(100% - 100px);
+  }
+
+  .header-center {
+    flex: 0 0 auto;
+  }
+
+  .search-box {
+    padding: 0.35rem 0.6rem;
+    min-width: 150px;
+  }
+
+  .search-input {
+    font-size: 0.8rem;
+    min-width: 100px;
+  }
+
+  .secondary-nav-container {
+    gap: 1rem;
+    padding: 0 1.5rem 0 0.75rem;
+    height: 50px;
   }
 
   .secondary-nav a {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  /* Keep centered logo/text on small mobile too */
+  .admin-top-header .logo-text-container.logo-text-header {
+    justify-content: center;
   }
 }

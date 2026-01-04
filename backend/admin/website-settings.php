@@ -11,26 +11,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $settings = [
             'website_logo' => $_POST['website_logo'] ?? '',
+            'website_favicon' => $_POST['website_favicon'] ?? '',
             'logo_text_line1' => $_POST['logo_text_line1'] ?? 'Hamro Digi',
             'logo_text_line2' => $_POST['logo_text_line2'] ?? 'CART',
             'website_title' => $_POST['website_title'] ?? 'Hamro Digi Cart',
             'website_tagline' => $_POST['website_tagline'] ?? 'Best Digital Product In India',
             'website_description' => $_POST['website_description'] ?? '',
             'facebook_url' => $_POST['facebook_url'] ?? '',
+            'facebook_name' => $_POST['facebook_name'] ?? 'Facebook',
+            'facebook_icon_url' => $_POST['facebook_icon_url'] ?? '',
             'instagram_url' => $_POST['instagram_url'] ?? '',
+            'instagram_name' => $_POST['instagram_name'] ?? 'Instagram',
+            'instagram_icon_url' => $_POST['instagram_icon_url'] ?? '',
             'youtube_url' => $_POST['youtube_url'] ?? '',
+            'youtube_name' => $_POST['youtube_name'] ?? 'YouTube',
+            'youtube_icon_url' => $_POST['youtube_icon_url'] ?? '',
             'twitter_url' => $_POST['twitter_url'] ?? '',
+            'twitter_name' => $_POST['twitter_name'] ?? 'Twitter/X',
+            'twitter_icon_url' => $_POST['twitter_icon_url'] ?? '',
             'whatsapp_url' => $_POST['whatsapp_url'] ?? '',
+            'whatsapp_name' => $_POST['whatsapp_name'] ?? 'WhatsApp',
+            'whatsapp_icon_url' => $_POST['whatsapp_icon_url'] ?? '',
             'footer_copyright' => $_POST['footer_copyright'] ?? 'Copyright (c) ' . date('Y'),
+            'admin_order_notification_email' => $_POST['admin_order_notification_email'] ?? '',
             'contact_email' => $_POST['contact_email'] ?? '',
             'contact_phone' => $_POST['contact_phone'] ?? '',
             'contact_address' => $_POST['contact_address'] ?? '',
-            'banner1_title' => $_POST['banner1_title'] ?? 'WE ARE Creators DIGITAL PRODUCT',
-            'banner1_subtitle' => $_POST['banner1_subtitle'] ?? 'Sell Digital Products For Free create Store',
-            'banner1_image' => $_POST['banner1_image'] ?? '',
-            'banner2_title' => $_POST['banner2_title'] ?? 'WE ARE Creators DIGITAL PRODUCT',
-            'banner2_subtitle' => $_POST['banner2_subtitle'] ?? 'Digital Products Selling Website',
-            'banner2_image' => $_POST['banner2_image'] ?? '',
             'popup_enabled' => isset($_POST['popup_enabled']) ? '1' : '0',
             'popup_title' => $_POST['popup_title'] ?? '',
             'popup_content' => $_POST['popup_content'] ?? '',
@@ -51,7 +57,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Load existing settings
-$stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key LIKE 'website_%' OR setting_key LIKE 'logo_%' OR setting_key LIKE '%_url' OR setting_key LIKE 'contact_%' OR setting_key LIKE 'footer_%' OR setting_key LIKE 'banner%' OR setting_key LIKE 'popup%'");
+$stmt = $pdo->query("SELECT setting_key, setting_value FROM settings 
+                     WHERE setting_key LIKE 'website_%' 
+                        OR setting_key LIKE 'logo_%' 
+                        OR setting_key LIKE '%_url' 
+                        OR setting_key LIKE '%_name'
+                        OR setting_key LIKE 'contact_%' 
+                        OR setting_key LIKE 'footer_%' 
+                        OR setting_key LIKE 'banner%' 
+                        OR setting_key LIKE 'popup%'");
 $settingsData = $stmt->fetchAll();
 $settings = [];
 foreach ($settingsData as $row) {
@@ -64,6 +78,7 @@ foreach ($settingsData as $row) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website Settings - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
 </head>
 <body>
@@ -118,6 +133,26 @@ foreach ($settingsData as $row) {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Favicon Settings -->
+                    <div class="data-table" style="margin-bottom: 30px;">
+                        <h2 style="margin-bottom: 20px; padding: 20px 20px 0;">🌟 Favicon Settings</h2>
+                        <div style="padding: 20px;">
+                            <div class="form-group">
+                                <label>Website Favicon</label>
+                                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        <input type="file" id="faviconFile" accept="image/*" style="margin-bottom: 10px;">
+                                        <input type="url" id="website_favicon" name="website_favicon" placeholder="Or enter favicon image URL" value="<?php echo htmlspecialchars($settings['website_favicon'] ?? ''); ?>">
+                                    </div>
+                                    <div id="faviconPreview" style="width: 64px; height: 64px; border: 2px dashed #ddd; border-radius: 5px; display: none; align-items: center; justify-content: center; overflow: hidden; background: #f9f9f9;">
+                                        <img id="faviconPreviewImg" src="" alt="Favicon Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                    </div>
+                                </div>
+                                <small style="color: #666;">Upload a favicon (PNG recommended) or enter an image URL. This will apply to both the homepage and admin panel.</small>
+                            </div>
+                        </div>
+                    </div>
                     
                     <!-- Website Information -->
                     <div class="data-table" style="margin-bottom: 30px;">
@@ -144,29 +179,64 @@ foreach ($settingsData as $row) {
                     <div class="data-table" style="margin-bottom: 30px;">
                         <h2 style="margin-bottom: 20px; padding: 20px 20px 0;">🔗 Social Media Links</h2>
                         <div style="padding: 20px;">
-                            <div class="form-group">
-                                <label>Facebook URL</label>
-                                <input type="url" name="facebook_url" value="<?php echo htmlspecialchars($settings['facebook_url'] ?? ''); ?>" placeholder="https://facebook.com/yourpage">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Instagram URL</label>
-                                <input type="url" name="instagram_url" value="<?php echo htmlspecialchars($settings['instagram_url'] ?? ''); ?>" placeholder="https://instagram.com/yourpage">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>YouTube URL</label>
-                                <input type="url" name="youtube_url" value="<?php echo htmlspecialchars($settings['youtube_url'] ?? ''); ?>" placeholder="https://youtube.com/yourchannel">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Twitter/X URL</label>
-                                <input type="url" name="twitter_url" value="<?php echo htmlspecialchars($settings['twitter_url'] ?? ''); ?>" placeholder="https://twitter.com/yourhandle">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>WhatsApp URL</label>
-                                <input type="url" name="whatsapp_url" value="<?php echo htmlspecialchars($settings['whatsapp_url'] ?? ''); ?>" placeholder="https://wa.me/1234567890">
+                            <p style="margin: 0 0 14px 0; color: #666; font-size: 13px;">
+                                You can change the <strong>name</strong>, <strong>icon</strong> and <strong>URL</strong>. Icons support PNG/JPG/WebP/GIF/ICO uploads.
+                            </p>
+
+                            <?php
+                              $socialPlatforms = [
+                                ['key' => 'facebook', 'label' => 'Facebook'],
+                                ['key' => 'instagram', 'label' => 'Instagram'],
+                                ['key' => 'youtube', 'label' => 'YouTube'],
+                                ['key' => 'twitter', 'label' => 'Twitter/X'],
+                                ['key' => 'whatsapp', 'label' => 'WhatsApp'],
+                              ];
+                            ?>
+
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 14px;">
+                                <?php foreach ($socialPlatforms as $p): 
+                                  $k = $p['key'];
+                                  $nameKey = $k . '_name';
+                                  $iconKey = $k . '_icon_url';
+                                  $urlKey = $k . '_url';
+                                ?>
+                                  <div style="border: 1px solid #eee; border-radius: 10px; padding: 14px; background: #fff;">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px;">
+                                      <div style="font-weight: 700; color: #111827;"><?php echo htmlspecialchars($p['label']); ?></div>
+                                      <div id="<?php echo $k; ?>IconPreview" style="width: 44px; height: 44px; border: 1px dashed #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f9fafb;">
+                                        <?php if (!empty($settings[$iconKey] ?? '')): ?>
+                                          <img id="<?php echo $k; ?>IconPreviewImg" src="<?php echo htmlspecialchars($settings[$iconKey]); ?>" alt="<?php echo htmlspecialchars($p['label']); ?> icon" style="width: 100%; height: 100%; object-fit: contain;">
+                                        <?php else: ?>
+                                          <img id="<?php echo $k; ?>IconPreviewImg" src="" alt="<?php echo htmlspecialchars($p['label']); ?> icon" style="width: 100%; height: 100%; object-fit: contain; display:none;">
+                                          <span style="color:#9ca3af; font-size: 11px;">icon</span>
+                                        <?php endif; ?>
+                                      </div>
+                                    </div>
+
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                      <div class="form-group" style="margin: 0;">
+                                        <label for="<?php echo $k; ?>_name">Display Name</label>
+                                        <input id="<?php echo $k; ?>_name" type="text" name="<?php echo $nameKey; ?>" value="<?php echo htmlspecialchars($settings[$nameKey] ?? $p['label']); ?>" placeholder="<?php echo htmlspecialchars($p['label']); ?>">
+                                      </div>
+                                      <div class="form-group" style="margin: 0;">
+                                        <label for="<?php echo $k; ?>_url">URL</label>
+                                        <input id="<?php echo $k; ?>_url" type="url" name="<?php echo $urlKey; ?>" value="<?php echo htmlspecialchars($settings[$urlKey] ?? ''); ?>" placeholder="https://...">
+                                      </div>
+                                    </div>
+
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                                      <div class="form-group" style="margin: 0;">
+                                        <label for="<?php echo $k; ?>IconFile">Upload Icon (Optional)</label>
+                                        <input type="file" id="<?php echo $k; ?>IconFile" accept="image/*">
+                                        <small style="color:#666;">Recommended: square icon (e.g. 64×64)</small>
+                                      </div>
+                                      <div class="form-group" style="margin: 0;">
+                                        <label for="<?php echo $k; ?>_icon_url">Icon URL (Optional)</label>
+                                        <input id="<?php echo $k; ?>_icon_url" type="url" name="<?php echo $iconKey; ?>" value="<?php echo htmlspecialchars($settings[$iconKey] ?? ''); ?>" placeholder="https://...">
+                                      </div>
+                                    </div>
+                                  </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
@@ -175,6 +245,12 @@ foreach ($settingsData as $row) {
                     <div class="data-table" style="margin-bottom: 30px;">
                         <h2 style="margin-bottom: 20px; padding: 20px 20px 0;">📞 Contact Information</h2>
                         <div style="padding: 20px;">
+                            <div class="form-group">
+                                <label>Admin Order Notification Email</label>
+                                <input type="email" name="admin_order_notification_email" value="<?php echo htmlspecialchars($settings['admin_order_notification_email'] ?? ''); ?>" placeholder="admin@yourdomain.com">
+                                <small style="color: #666;">New order emails (purchase notifications) will be sent here. Recommended: your CPanel email.</small>
+                            </div>
+
                             <div class="form-group">
                                 <label>Contact Email</label>
                                 <input type="email" name="contact_email" value="<?php echo htmlspecialchars($settings['contact_email'] ?? ''); ?>" placeholder="contact@example.com">
@@ -200,60 +276,6 @@ foreach ($settingsData as $row) {
                                 <label>Footer Copyright Text</label>
                                 <input type="text" name="footer_copyright" value="<?php echo htmlspecialchars($settings['footer_copyright'] ?? 'Copyright (c) ' . date('Y')); ?>" placeholder="Copyright (c) 2024">
                                 <small style="color: #666;">Use {year} to automatically insert current year</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Banner Settings -->
-                    <div class="data-table" style="margin-bottom: 30px;">
-                        <h2 style="margin-bottom: 20px; padding: 20px 20px 0;">🎨 Homepage Banner Settings</h2>
-                        <div style="padding: 20px;">
-                            <!-- Banner 1 -->
-                            <h3 style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">Banner 1</h3>
-                            <div class="form-group">
-                                <label>Banner 1 Title</label>
-                                <input type="text" name="banner1_title" value="<?php echo htmlspecialchars($settings['banner1_title'] ?? 'WE ARE Creators DIGITAL PRODUCT'); ?>" placeholder="WE ARE Creators DIGITAL PRODUCT">
-                            </div>
-                            <div class="form-group">
-                                <label>Banner 1 Subtitle</label>
-                                <input type="text" name="banner1_subtitle" value="<?php echo htmlspecialchars($settings['banner1_subtitle'] ?? 'Sell Digital Products For Free create Store'); ?>" placeholder="Sell Digital Products For Free create Store">
-                            </div>
-                            <div class="form-group">
-                                <label>Banner 1 Image</label>
-                                <div style="display: flex; gap: 10px; align-items: flex-start;">
-                                    <div style="flex: 1;">
-                                        <input type="file" id="banner1File" accept="image/*" style="margin-bottom: 10px;">
-                                        <input type="url" id="banner1_image" name="banner1_image" placeholder="Or enter banner image URL" value="<?php echo htmlspecialchars($settings['banner1_image'] ?? ''); ?>">
-                                    </div>
-                                    <div id="banner1Preview" style="width: 150px; height: 150px; border: 2px dashed #ddd; border-radius: 5px; display: none; align-items: center; justify-content: center; overflow: hidden; background: #f9f9f9;">
-                                        <img id="banner1PreviewImg" src="" alt="Banner 1 Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                                    </div>
-                                </div>
-                                <small style="color: #666;">Upload a banner image or enter an image URL</small>
-                            </div>
-                            
-                            <!-- Banner 2 -->
-                            <h3 style="margin-top: 30px; margin-bottom: 15px; padding-top: 20px; padding-bottom: 10px; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd;">Banner 2</h3>
-                            <div class="form-group">
-                                <label>Banner 2 Title</label>
-                                <input type="text" name="banner2_title" value="<?php echo htmlspecialchars($settings['banner2_title'] ?? 'WE ARE Creators DIGITAL PRODUCT'); ?>" placeholder="WE ARE Creators DIGITAL PRODUCT">
-                            </div>
-                            <div class="form-group">
-                                <label>Banner 2 Subtitle</label>
-                                <input type="text" name="banner2_subtitle" value="<?php echo htmlspecialchars($settings['banner2_subtitle'] ?? 'Digital Products Selling Website'); ?>" placeholder="Digital Products Selling Website">
-                            </div>
-                            <div class="form-group">
-                                <label>Banner 2 Image</label>
-                                <div style="display: flex; gap: 10px; align-items: flex-start;">
-                                    <div style="flex: 1;">
-                                        <input type="file" id="banner2File" accept="image/*" style="margin-bottom: 10px;">
-                                        <input type="url" id="banner2_image" name="banner2_image" placeholder="Or enter banner image URL" value="<?php echo htmlspecialchars($settings['banner2_image'] ?? ''); ?>">
-                                    </div>
-                                    <div id="banner2Preview" style="width: 150px; height: 150px; border: 2px dashed #ddd; border-radius: 5px; display: none; align-items: center; justify-content: center; overflow: hidden; background: #f9f9f9;">
-                                        <img id="banner2PreviewImg" src="" alt="Banner 2 Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                                    </div>
-                                </div>
-                                <small style="color: #666;">Upload a banner image or enter an image URL</small>
                             </div>
                         </div>
                     </div>
@@ -311,11 +333,22 @@ foreach ($settingsData as $row) {
         const logoURL = document.getElementById('website_logo');
         const logoPreview = document.getElementById('logoPreview');
         const logoPreviewImg = document.getElementById('logoPreviewImg');
+
+        const faviconFile = document.getElementById('faviconFile');
+        const faviconURL = document.getElementById('website_favicon');
+        const faviconPreview = document.getElementById('faviconPreview');
+        const faviconPreviewImg = document.getElementById('faviconPreviewImg');
         
         // Load existing logo preview
         if (logoURL.value) {
             logoPreviewImg.src = logoURL.value;
             logoPreview.style.display = 'flex';
+        }
+
+        // Load existing favicon preview
+        if (faviconURL.value) {
+            faviconPreviewImg.src = faviconURL.value;
+            faviconPreview.style.display = 'flex';
         }
         
         logoFile.addEventListener('change', function() {
@@ -358,40 +391,28 @@ foreach ($settingsData as $row) {
                 logoPreviewImg.src = '';
             }
         });
-        
-        // Banner 1 image handling
-        const banner1File = document.getElementById('banner1File');
-        const banner1URL = document.getElementById('banner1_image');
-        const banner1Preview = document.getElementById('banner1Preview');
-        const banner1PreviewImg = document.getElementById('banner1PreviewImg');
-        
-        // Load existing banner 1 preview
-        if (banner1URL.value) {
-            banner1PreviewImg.src = banner1URL.value;
-            banner1Preview.style.display = 'flex';
-        }
-        
-        banner1File.addEventListener('change', function() {
+
+        faviconFile.addEventListener('change', function() {
             if (this.files && this.files[0]) {
                 const file = this.files[0];
-                
+
                 if (!file.type.startsWith('image/')) {
                     alert('Please select an image file');
                     this.value = '';
                     return;
                 }
-                
+
                 if (file.size > 5 * 1024 * 1024) {
                     alert('Image size should be less than 5MB');
                     this.value = '';
                     return;
                 }
-                
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    banner1PreviewImg.src = e.target.result;
-                    banner1Preview.style.display = 'flex';
-                    banner1URL.value = '';
+                    faviconPreviewImg.src = e.target.result;
+                    faviconPreview.style.display = 'flex';
+                    faviconURL.value = '';
                 };
                 reader.onerror = () => {
                     alert('Error reading file');
@@ -400,68 +421,15 @@ foreach ($settingsData as $row) {
                 reader.readAsDataURL(file);
             }
         });
-        
-        banner1URL.addEventListener('input', function() {
+
+        faviconURL.addEventListener('input', function() {
             if (this.value) {
-                banner1PreviewImg.src = this.value;
-                banner1Preview.style.display = 'flex';
-                banner1File.value = '';
+                faviconPreviewImg.src = this.value;
+                faviconPreview.style.display = 'flex';
+                faviconFile.value = '';
             } else {
-                banner1Preview.style.display = 'none';
-                banner1PreviewImg.src = '';
-            }
-        });
-        
-        // Banner 2 image handling
-        const banner2File = document.getElementById('banner2File');
-        const banner2URL = document.getElementById('banner2_image');
-        const banner2Preview = document.getElementById('banner2Preview');
-        const banner2PreviewImg = document.getElementById('banner2PreviewImg');
-        
-        // Load existing banner 2 preview
-        if (banner2URL.value) {
-            banner2PreviewImg.src = banner2URL.value;
-            banner2Preview.style.display = 'flex';
-        }
-        
-        banner2File.addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                
-                if (!file.type.startsWith('image/')) {
-                    alert('Please select an image file');
-                    this.value = '';
-                    return;
-                }
-                
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('Image size should be less than 5MB');
-                    this.value = '';
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    banner2PreviewImg.src = e.target.result;
-                    banner2Preview.style.display = 'flex';
-                    banner2URL.value = '';
-                };
-                reader.onerror = () => {
-                    alert('Error reading file');
-                    this.value = '';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        banner2URL.addEventListener('input', function() {
-            if (this.value) {
-                banner2PreviewImg.src = this.value;
-                banner2Preview.style.display = 'flex';
-                banner2File.value = '';
-            } else {
-                banner2Preview.style.display = 'none';
-                banner2PreviewImg.src = '';
+                faviconPreview.style.display = 'none';
+                faviconPreviewImg.src = '';
             }
         });
         
@@ -517,6 +485,63 @@ foreach ($settingsData as $row) {
                 popupPreviewImg.src = '';
             }
         });
+
+        // Social icon previews + optional uploads
+        const socialPlatforms = ['facebook', 'instagram', 'youtube', 'twitter', 'whatsapp'];
+        socialPlatforms.forEach((k) => {
+            const fileEl = document.getElementById(`${k}IconFile`);
+            const urlEl = document.getElementById(`${k}_icon_url`);
+            const previewWrap = document.getElementById(`${k}IconPreview`);
+            const previewImg = document.getElementById(`${k}IconPreviewImg`);
+            if (!fileEl || !urlEl || !previewWrap || !previewImg) return;
+
+            const setPreview = (src) => {
+                if (src) {
+                    previewImg.src = src;
+                    previewImg.style.display = 'block';
+                    // hide placeholder text if present
+                    const placeholder = previewWrap.querySelector('span');
+                    if (placeholder) placeholder.style.display = 'none';
+                } else {
+                    previewImg.src = '';
+                    previewImg.style.display = 'none';
+                    const placeholder = previewWrap.querySelector('span');
+                    if (placeholder) placeholder.style.display = 'block';
+                }
+            };
+
+            fileEl.addEventListener('change', function() {
+                const file = this.files && this.files[0];
+                if (!file) return;
+
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file');
+                    this.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setPreview(e.target.result);
+                    urlEl.value = '';
+                };
+                reader.onerror = () => {
+                    alert('Error reading file');
+                    this.value = '';
+                };
+                reader.readAsDataURL(file);
+            });
+
+            urlEl.addEventListener('input', function() {
+                const v = this.value.trim();
+                if (v) {
+                    setPreview(v);
+                    fileEl.value = '';
+                } else {
+                    setPreview('');
+                }
+            });
+        });
         
         document.getElementById('websiteSettingsForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -528,6 +553,7 @@ foreach ($settingsData as $row) {
             
             try {
                 let logoUrl = logoURL.value.trim();
+                let faviconUrl = faviconURL.value.trim();
                 
                 // Upload logo file if selected
                 if (logoFile.files && logoFile.files.length > 0) {
@@ -564,75 +590,37 @@ foreach ($settingsData as $row) {
                         return;
                     }
                 }
-                
-                // Upload banner 1 file if selected
-                let banner1Url = banner1URL.value.trim();
-                if (banner1File.files && banner1File.files.length > 0) {
-                    const file = banner1File.files[0];
+
+                // Upload favicon file if selected
+                if (faviconFile.files && faviconFile.files.length > 0) {
+                    const file = faviconFile.files[0];
                     const formData = new FormData();
                     formData.append('file', file);
-                    
+
                     try {
                         const uploadResponse = await fetch('../api/upload.php', {
                             method: 'POST',
                             body: formData
                         });
-                        
+
                         if (!uploadResponse.ok) {
                             throw new Error('Upload request failed');
                         }
-                        
+
                         const uploadData = await uploadResponse.json();
-                        
+
                         if (uploadData.success) {
                             if (uploadData.data && uploadData.data.url) {
-                                banner1Url = uploadData.data.url;
+                                faviconUrl = uploadData.data.url;
                             } else if (uploadData.url) {
-                                banner1Url = uploadData.url;
+                                faviconUrl = uploadData.url;
                             }
-                            banner1URL.value = banner1Url;
+                            faviconURL.value = faviconUrl;
                         } else {
                             throw new Error(uploadData.error || 'Upload failed');
                         }
                     } catch (error) {
-                        alert('Banner 1 upload failed: ' + error.message);
-                        submitButton.disabled = false;
-                        submitButton.textContent = originalText;
-                        return;
-                    }
-                }
-                
-                // Upload banner 2 file if selected
-                let banner2Url = banner2URL.value.trim();
-                if (banner2File.files && banner2File.files.length > 0) {
-                    const file = banner2File.files[0];
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    
-                    try {
-                        const uploadResponse = await fetch('../api/upload.php', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
-                        if (!uploadResponse.ok) {
-                            throw new Error('Upload request failed');
-                        }
-                        
-                        const uploadData = await uploadResponse.json();
-                        
-                        if (uploadData.success) {
-                            if (uploadData.data && uploadData.data.url) {
-                                banner2Url = uploadData.data.url;
-                            } else if (uploadData.url) {
-                                banner2Url = uploadData.url;
-                            }
-                            banner2URL.value = banner2Url;
-                        } else {
-                            throw new Error(uploadData.error || 'Upload failed');
-                        }
-                    } catch (error) {
-                        alert('Banner 2 upload failed: ' + error.message);
+                        alert('Favicon upload failed: ' + error.message);
                         submitButton.disabled = false;
                         submitButton.textContent = originalText;
                         return;
@@ -673,6 +661,49 @@ foreach ($settingsData as $row) {
                         submitButton.disabled = false;
                         submitButton.textContent = originalText;
                         return;
+                    }
+                }
+
+                // Upload social icons if selected
+                for (const k of socialPlatforms) {
+                    const fileEl = document.getElementById(`${k}IconFile`);
+                    const urlEl = document.getElementById(`${k}_icon_url`);
+                    if (!fileEl || !urlEl) continue;
+
+                    let iconUrl = (urlEl.value || '').trim();
+                    if (fileEl.files && fileEl.files.length > 0) {
+                        const file = fileEl.files[0];
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        try {
+                            const uploadResponse = await fetch('../api/upload.php', {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            if (!uploadResponse.ok) {
+                                throw new Error('Upload request failed');
+                            }
+
+                            const uploadData = await uploadResponse.json();
+
+                            if (uploadData.success) {
+                                if (uploadData.data && uploadData.data.url) {
+                                    iconUrl = uploadData.data.url;
+                                } else if (uploadData.url) {
+                                    iconUrl = uploadData.url;
+                                }
+                                urlEl.value = iconUrl;
+                            } else {
+                                throw new Error(uploadData.error || 'Upload failed');
+                            }
+                        } catch (error) {
+                            alert(`${k} icon upload failed: ` + error.message);
+                            submitButton.disabled = false;
+                            submitButton.textContent = originalText;
+                            return;
+                        }
                     }
                 }
                 

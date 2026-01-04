@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Redirect if already logged in
 if (isAdminLoggedIn()) {
@@ -38,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Hamro Digi Cart</title>
+    <?php include 'includes/favicon.php'; ?>
     <style>
         * {
             margin: 0;
@@ -119,17 +121,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
         }
-        .default-credentials {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            font-size: 13px;
-            color: #666;
-        }
-        .default-credentials strong {
-            color: #333;
-        }
     </style>
 </head>
 <body>
@@ -156,15 +147,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <button type="submit" class="btn-login">Login</button>
         </form>
-        
-        <div class="default-credentials">
-            <strong>Default Credentials:</strong><br>
-            Username: <code>admin</code><br>
-            Password: <code>admin123</code>
-        </div>
     </div>
 </body>
 </html>
+
 
 
 

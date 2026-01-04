@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import Logo from '../components/Logo';
 import { fetchProductById, submitOrder, fetchPaymentQRCode } from '../utils/productService';
 import qrCodeFallback from '../assets/qr_code.png';
 import './ProductPayment.css';
@@ -17,9 +16,18 @@ const ProductPayment = () => {
     const [qrCode, setQrCode] = useState(qrCodeFallback);
 
     // Get data from location state (from ProductDownload page)
-    const { email, phone, includeUpsell, totalAmount } = location.state || {};
+    const { 
+      email, 
+      phone, 
+      productPrice,
+      productDiscount,
+      discountedPrice
+    } = location.state || {};
 
     useEffect(() => {
+        // Scroll to top on mount and when product ID changes
+        window.scrollTo(0, 0);
+
         const loadProduct = async () => {
             try {
                 const foundProduct = await fetchProductById(id);
@@ -97,14 +105,16 @@ const ProductPayment = () => {
         }
         
         try {
+            // Use discounted price (product price only, without upsell)
+            const finalTotalAmount = discountedPrice || productPrice || 0;
+            
             const orderData = {
                 productId: product.id,
                 productTitle: product.title,
                 customerEmail: email,
                 customerPhone: phone,
-                totalAmount: totalAmount,
-                paymentScreenshot: screenshot,
-                hasUpsell: includeUpsell
+                totalAmount: finalTotalAmount.toFixed(2),
+                paymentScreenshot: screenshot
             };
 
             const newOrder = await submitOrder(orderData);
@@ -138,18 +148,6 @@ const ProductPayment = () => {
 
     return (
         <div className="product-payment-page">
-            {/* Top Navbar */}
-            <div className="payment-navbar">
-                <div className="payment-navbar-container">
-                    <Link to="/" className="payment-navbar-logo">
-                        <Logo size="default" showText={true} variant="header" />
-                    </Link>
-                    <nav className="payment-navbar-nav">
-                        <Link to="/" className="payment-navbar-link">Home</Link>
-                    </nav>
-                </div>
-            </div>
-
             <div className="payment-content-wrapper">
                 <div className="payment-card">
                 <div className="payment-header">
@@ -166,13 +164,21 @@ const ProductPayment = () => {
                         <span className="label">Product:</span>
                         <span className="value">{product.title}</span>
                     </div>
-                    <div className="summary-item">
-                        <span className="label">Price:</span>
-                        <span className="value">Rs. {totalAmount}</span>
-                    </div>
+                    {productPrice !== undefined && (
+                        <div className="summary-item">
+                            <span className="label">Original Price:</span>
+                            <span className="value">Rs. {parseFloat(productPrice).toFixed(2)}</span>
+                        </div>
+                    )}
+                    {productDiscount > 0 && (
+                        <div className="summary-item">
+                            <span className="label">Discount:</span>
+                            <span className="value discount-value">{productDiscount}% OFF</span>
+                        </div>
+                    )}
                     <div className="total-row">
                         <span className="label">Total Amount:</span>
-                        <span className="value">Rs. {totalAmount}</span>
+                        <span className="value">Rs. {(discountedPrice || productPrice || 0).toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -183,7 +189,7 @@ const ProductPayment = () => {
                     <div className="qr-container">
                         <img src={qrCode} alt="Payment QR Code" className="qr-image" />
                         <p className="qr-instruction">
-                            Scan this QR with your banking/UPI app and complete the payment.
+                            Scan this QR with your Banking/Esewa/Khalti app and complete the payment.
                             <strong>After paying, upload the payment screenshot below.</strong>
                         </p>
                     </div>

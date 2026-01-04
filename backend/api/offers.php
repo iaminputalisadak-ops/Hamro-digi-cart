@@ -45,26 +45,18 @@ switch ($method) {
         
         $data = json_decode(file_get_contents('php://input'), true);
         
-        if (!isset($data['title']) || !isset($data['discount_value'])) {
-            sendError('Title and discount value are required');
+        if (!isset($data['title']) || empty(trim($data['title']))) {
+            sendError('Offer name is required');
         }
         
-        $discountType = isset($data['discount_type']) ? $data['discount_type'] : 'percentage';
-        $status = isset($data['status']) ? $data['status'] : 'active';
+        $title = trim($data['title']);
         
+        // Set default values for other fields
+        // Use link field to store category name for filtering products
+        $link = isset($data['link']) ? trim($data['link']) : '';
         $stmt = $pdo->prepare("INSERT INTO offers (title, description, discount_type, discount_value, start_date, end_date, image, link, status) 
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $data['title'],
-            $data['description'] ?? '',
-            $discountType,
-            $data['discount_value'],
-            $data['start_date'] ?? null,
-            $data['end_date'] ?? null,
-            $data['image'] ?? '',
-            $data['link'] ?? '',
-            $status
-        ]);
+                               VALUES (?, '', 'percentage', 0, NULL, NULL, '', ?, 'active')");
+        $stmt->execute([$title, $link]);
         
         $offerId = $pdo->lastInsertId();
         sendSuccess(['id' => $offerId], 'Offer created successfully');
@@ -79,21 +71,22 @@ switch ($method) {
             sendError('Offer ID is required');
         }
         
+        if (!isset($data['title']) || empty(trim($data['title']))) {
+            sendError('Offer name is required');
+        }
+        
+        $title = trim($data['title']);
+        $link = isset($data['link']) ? trim($data['link']) : '';
+        
+        // Update title and link (category filter) fields
         $stmt = $pdo->prepare("UPDATE offers SET 
-                               title = ?, description = ?, discount_type = ?, discount_value = ?,
-                               start_date = ?, end_date = ?, image = ?, link = ?, status = ?,
+                               title = ?,
+                               link = ?,
                                updated_at = CURRENT_TIMESTAMP
                                WHERE id = ?");
         $stmt->execute([
-            $data['title'] ?? '',
-            $data['description'] ?? '',
-            $data['discount_type'] ?? 'percentage',
-            $data['discount_value'] ?? 0,
-            $data['start_date'] ?? null,
-            $data['end_date'] ?? null,
-            $data['image'] ?? '',
-            $data['link'] ?? '',
-            $data['status'] ?? 'active',
+            $title,
+            $link,
             $data['id']
         ]);
         
@@ -103,14 +96,21 @@ switch ($method) {
     case 'DELETE':
         requireAdminLogin();
         
-        if (!isset($_GET['id'])) {
-            sendError('Offer ID is required');
+        // Check if delete_all parameter is set
+        if (isset($_GET['delete_all']) && $_GET['delete_all'] == '1') {
+            // Bulk delete is intentionally disabled for safety.
+            sendError('Delete All offers is disabled', 403);
+        } else {
+            // Delete single offer
+            if (!isset($_GET['id'])) {
+                sendError('Offer ID is required');
+            }
+            
+            $stmt = $pdo->prepare("DELETE FROM offers WHERE id = ?");
+            $stmt->execute([$_GET['id']]);
+            
+            sendSuccess([], 'Offer deleted successfully');
         }
-        
-        $stmt = $pdo->prepare("DELETE FROM offers WHERE id = ?");
-        $stmt->execute([$_GET['id']]);
-        
-        sendSuccess([], 'Offer deleted successfully');
         break;
         
     default:

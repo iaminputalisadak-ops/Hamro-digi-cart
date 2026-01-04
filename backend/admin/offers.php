@@ -10,6 +10,7 @@ $apiUrl = '../api/offers.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Offers - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
 </head>
 <body>
@@ -21,8 +22,13 @@ $apiUrl = '../api/offers.php';
             
             <div class="admin-content">
                 <div class="page-header">
-                    <h1>Offers</h1>
-                    <button class="btn btn-primary" onclick="openOfferModal()">+ Add Offer</button>
+                    <div>
+                        <h1>Offers</h1>
+                        <p style="color: #666; margin-top: 5px; font-size: 14px;">Manage offer names that appear in the navigation menu</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="openOfferModal()">+ Add Offer</button>
+                    </div>
                 </div>
                 
                 <div class="data-table">
@@ -30,17 +36,12 @@ $apiUrl = '../api/offers.php';
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Image</th>
-                                <th>Title</th>
-                                <th>Discount</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Status</th>
+                                <th>Offer Name</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="offers-table">
-                            <tr><td colspan="8">Loading...</td></tr>
+                            <tr><td colspan="3">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -58,46 +59,20 @@ $apiUrl = '../api/offers.php';
             <form id="offerForm">
                 <input type="hidden" id="offerId">
                 <div class="form-group">
-                    <label>Title *</label>
-                    <input type="text" id="offerTitle" required>
+                    <label>Offer Name *</label>
+                    <input type="text" id="offerTitle" placeholder="e.g., Reels bundle रु99" required>
+                    <small style="color: #666;">Enter the offer name that will be displayed in the navigation</small>
                 </div>
                 <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="offerDescription"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Discount Type *</label>
-                    <select id="offerDiscountType" required>
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="amount">Amount (₹)</option>
+                    <label>Filter Products By Category (Optional)</label>
+                    <select id="offerCategory">
+                        <option value="">Auto-detect from offer name</option>
                     </select>
+                    <small style="color: #666;">Select a category to filter products. If empty, products will be matched by keywords in the offer name.</small>
                 </div>
-                <div class="form-group">
-                    <label>Discount Value *</label>
-                    <input type="number" id="offerDiscountValue" step="0.01" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label>Start Date</label>
-                    <input type="date" id="offerStartDate">
-                </div>
-                <div class="form-group">
-                    <label>End Date</label>
-                    <input type="date" id="offerEndDate">
-                </div>
-                <div class="form-group">
-                    <label>Image URL</label>
-                    <input type="text" id="offerImage" placeholder="https://example.com/image.jpg">
-                </div>
-                <div class="form-group">
-                    <label>Link</label>
-                    <input type="text" id="offerLink" placeholder="/product/123 or /category/reels-bundle">
-                </div>
-                <div class="form-group">
-                    <label>Status *</label>
-                    <select id="offerStatus" required>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
+                <div class="form-group" id="categorySuggestionsContainer" style="display: none;">
+                    <label style="font-size: 0.85rem; color: #666;">Suggested Categories:</label>
+                    <div id="categorySuggestions" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;"></div>
                 </div>
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary">Save</button>
@@ -124,35 +99,15 @@ $apiUrl = '../api/offers.php';
         function displayOffers(offers) {
             const tbody = document.getElementById('offers-table');
             if (offers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8">No offers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3">No offers found. Click "+ Add Offer" to create one.</td></tr>';
                 return;
             }
             
             tbody.innerHTML = offers.map(offer => {
-                const discount = offer.discount_type === 'percentage' 
-                    ? `${offer.discount_value}%` 
-                    : `₹${offer.discount_value}`;
-                
-                const imageCell = offer.image 
-                    ? `<img src="${offer.image}" alt="${offer.title}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">`
-                    : '<span style="color: #999;">No image</span>';
-                
-                const statusBadge = offer.status === 'active' 
-                    ? '<span class="status-badge status-active">Active</span>'
-                    : '<span class="status-badge status-inactive">Inactive</span>';
-                
-                const startDate = offer.start_date || '-';
-                const endDate = offer.end_date || '-';
-                
                 return `
                     <tr>
                         <td>#${offer.id}</td>
-                        <td>${imageCell}</td>
-                        <td><strong>${offer.title}</strong></td>
-                        <td>${discount}</td>
-                        <td>${startDate}</td>
-                        <td>${endDate}</td>
-                        <td>${statusBadge}</td>
+                        <td><strong>${escapeHtml(offer.title || 'Untitled Offer')}</strong></td>
                         <td>
                             <button class="btn btn-edit btn-small" onclick="editOffer(${offer.id})">Edit</button>
                             <button class="btn btn-danger btn-small" onclick="deleteOffer(${offer.id})">Delete</button>
@@ -162,28 +117,33 @@ $apiUrl = '../api/offers.php';
             }).join('');
         }
         
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         function openOfferModal(offer = null) {
             document.getElementById('offerModal').style.display = 'flex';
             document.getElementById('modalTitle').textContent = offer ? 'Edit Offer' : 'Add Offer';
             document.getElementById('offerForm').reset();
             document.getElementById('offerId').value = '';
+            document.getElementById('offerCategory').value = '';
+            document.getElementById('categorySuggestionsContainer').style.display = 'none';
             
             if (offer) {
                 document.getElementById('offerId').value = offer.id;
-                document.getElementById('offerTitle').value = offer.title;
-                document.getElementById('offerDescription').value = offer.description || '';
-                document.getElementById('offerDiscountType').value = offer.discount_type || 'percentage';
-                document.getElementById('offerDiscountValue').value = offer.discount_value;
-                document.getElementById('offerStartDate').value = offer.start_date || '';
-                document.getElementById('offerEndDate').value = offer.end_date || '';
-                document.getElementById('offerImage').value = offer.image || '';
-                document.getElementById('offerLink').value = offer.link || '';
-                document.getElementById('offerStatus').value = offer.status || 'active';
+                document.getElementById('offerTitle').value = offer.title || '';
+                // Use link field to store category name for filtering
+                document.getElementById('offerCategory').value = offer.link || '';
             }
         }
         
         function closeOfferModal() {
             document.getElementById('offerModal').style.display = 'none';
+            document.getElementById('categorySuggestionsContainer').style.display = 'none';
         }
         
         function editOffer(id) {
@@ -197,15 +157,20 @@ $apiUrl = '../api/offers.php';
         }
         
         function deleteOffer(id) {
-            if (confirm('Are you sure you want to delete this offer?')) {
+            if (confirm('Are you sure you want to delete this offer? This action cannot be undone.')) {
                 fetch(`${apiUrl}?id=${id}`, { method: 'DELETE' })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
                             loadOffers();
+                            showNotification('Offer deleted successfully!', 'success');
                         } else {
-                            alert('Error: ' + data.error);
+                            alert('Error: ' + (data.error || 'Unknown error'));
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error: ' + error.message);
                     });
             }
         }
@@ -213,23 +178,32 @@ $apiUrl = '../api/offers.php';
         document.getElementById('offerForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+            
+            const offerName = document.getElementById('offerTitle').value.trim();
+            
+            if (!offerName) {
+                alert('Please enter an offer name');
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+                return;
+            }
+            
+            const categoryFilter = document.getElementById('offerCategory').value.trim();
+            
             const formData = {
-                title: document.getElementById('offerTitle').value,
-                description: document.getElementById('offerDescription').value,
-                discount_type: document.getElementById('offerDiscountType').value,
-                discount_value: parseFloat(document.getElementById('offerDiscountValue').value),
-                start_date: document.getElementById('offerStartDate').value || null,
-                end_date: document.getElementById('offerEndDate').value || null,
-                image: document.getElementById('offerImage').value,
-                link: document.getElementById('offerLink').value,
-                status: document.getElementById('offerStatus').value
+                title: offerName,
+                link: categoryFilter // Use link field to store category name
             };
             
             const offerId = document.getElementById('offerId').value;
             const method = offerId ? 'PUT' : 'POST';
             
             if (offerId) {
-                formData.id = offerId;
+                formData.id = parseInt(offerId);
             }
             
             fetch(apiUrl, {
@@ -242,9 +216,18 @@ $apiUrl = '../api/offers.php';
                 if (data.success) {
                     closeOfferModal();
                     loadOffers();
+                    showNotification(offerId ? 'Offer updated successfully!' : 'Offer added successfully!', 'success');
                 } else {
-                    alert('Error: ' + data.error);
+                    alert('Error: ' + (data.error || 'Unknown error'));
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
             });
         });
         
@@ -254,7 +237,114 @@ $apiUrl = '../api/offers.php';
             }
         });
         
+        let allCategories = [];
+        
+        // Load categories from API
+        function loadCategories() {
+            fetch('../api/categories.php')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        allCategories = data.data || [];
+                        populateCategoryDropdown();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading categories:', error);
+                });
+        }
+        
+        // Populate category dropdown
+        function populateCategoryDropdown() {
+            const select = document.getElementById('offerCategory');
+            // Keep the first option (Auto-detect)
+            const firstOption = select.options[0];
+            select.innerHTML = '';
+            select.appendChild(firstOption);
+            
+            // Add all categories
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+        
+        // Show category suggestions based on offer name
+        function showCategorySuggestions(offerName) {
+            const suggestionsContainer = document.getElementById('categorySuggestionsContainer');
+            const suggestionsDiv = document.getElementById('categorySuggestions');
+            
+            if (!offerName || offerName.trim().length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            const searchTerm = offerName.toLowerCase().trim();
+            // Split search term into words for better matching
+            const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 1);
+            
+            const matchedCategories = allCategories.filter(cat => {
+                const catName = cat.name.toLowerCase();
+                // Check if category name contains any of the search words
+                if (searchWords.length > 0) {
+                    return searchWords.some(word => catName.includes(word));
+                }
+                return catName.includes(searchTerm);
+            }).sort((a, b) => {
+                // Sort by relevance - exact matches first, then starts-with matches, then alphabetical
+                const aName = a.name.toLowerCase();
+                const bName = b.name.toLowerCase();
+                if (aName === searchTerm) return -1;
+                if (bName === searchTerm) return 1;
+                if (aName.startsWith(searchTerm)) return -1;
+                if (bName.startsWith(searchTerm)) return 1;
+                return aName.localeCompare(bName);
+            });
+            
+            if (matchedCategories.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            // Show suggestions (limit to 5 most relevant)
+            suggestionsDiv.innerHTML = '';
+            matchedCategories.slice(0, 5).forEach(cat => {
+                const suggestionBtn = document.createElement('button');
+                suggestionBtn.type = 'button';
+                suggestionBtn.className = 'category-suggestion-btn';
+                suggestionBtn.textContent = cat.name;
+                suggestionBtn.style.cssText = 'padding: 6px 12px; background: #e3f2fd; border: 1px solid #2196f3; border-radius: 4px; color: #1976d2; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;';
+                suggestionBtn.onmouseover = function() { this.style.background = '#bbdefb'; };
+                suggestionBtn.onmouseout = function() { this.style.background = '#e3f2fd'; };
+                suggestionBtn.onclick = function() {
+                    document.getElementById('offerCategory').value = cat.name;
+                    suggestionsContainer.style.display = 'none';
+                };
+                suggestionsDiv.appendChild(suggestionBtn);
+            });
+            
+            suggestionsContainer.style.display = 'block';
+        }
+        
+        // Add event listener to offer name input for suggestions
+        const offerNameInput = document.getElementById('offerTitle');
+        if (offerNameInput) {
+            offerNameInput.addEventListener('input', function() {
+                showCategorySuggestions(this.value);
+            });
+            
+            offerNameInput.addEventListener('blur', function() {
+                // Hide suggestions after a short delay (to allow clicking on suggestions)
+                setTimeout(() => {
+                    document.getElementById('categorySuggestionsContainer').style.display = 'none';
+                }, 200);
+            });
+        }
+        
         loadOffers();
+        loadCategories();
     </script>
 </body>
 </html>

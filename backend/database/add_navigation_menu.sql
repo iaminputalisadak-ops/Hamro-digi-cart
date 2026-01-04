@@ -22,12 +22,13 @@ INSERT INTO navigation_menu_items (label, link, order_index, status) VALUES
 ('Reels Bundle', '/reels-bundle', 2, 'active'),
 ('Combo Reels bundle', '/combo-reels-bundle', 3, 'active'),
 ('Instagram Reels Bundle', '/instagram-reels-bundle', 4, 'active'),
-('Reels bundle ₹99', '/reels-bundle-99', 5, 'active'),
-('Reels bundle ₹149', '/reels-bundle-149', 6, 'active'),
-('Reels bundle ₹199', '/reels-bundle-199', 7, 'active'),
+('Reels bundle रु99', '/reels-bundle-99', 5, 'active'),
+('Reels bundle रु149', '/reels-bundle-149', 6, 'active'),
+('Reels bundle रु199', '/reels-bundle-199', 7, 'active'),
 ('Reels bundle', '/reels-bundle', 8, 'active'),
 ('Follow Us', '/follow-us', 9, 'active')
 ON DUPLICATE KEY UPDATE label=label;
+
 
 
 

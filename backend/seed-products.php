@@ -24,9 +24,9 @@ try {
             ['Premium Instagram Reels Pack 2025', 'Get 50+ premium Instagram reels templates, trending transitions, and music suggestions. Perfect for content creators.', 299, 20, 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400'],
             ['Viral TikTok Reels Collection', 'Collection of 30 viral TikTok reels templates with trending effects and transitions. Boost your engagement!', 199, 15, 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400'],
             ['Instagram Stories Reels Pack', 'Professional Instagram stories and reels templates. Includes animations, text overlays, and filters.', 249, 18, 'https://images.unsplash.com/photo-1522542550221-31fd19575a2d?w=400'],
-            ['Trending Reels Bundle ₹99', 'Affordable reels bundle with 20 trending templates. Perfect for beginners!', 99, 10, 'https://images.unsplash.com/photo-1562577309-4932fdd64cd1?w=400'],
-            ['Reels Bundle ₹149', 'Mid-range reels bundle with 35 professional templates and music suggestions.', 149, 12, 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400'],
-            ['Reels Bundle ₹199', 'Premium reels bundle with 45 templates, transitions, and exclusive effects.', 199, 25, 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400'],
+            ['Trending Reels Bundle रु99', 'Affordable reels bundle with 20 trending templates. Perfect for beginners!', 99, 10, 'https://images.unsplash.com/photo-1562577309-4932fdd64cd1?w=400'],
+            ['Reels Bundle रु149', 'Mid-range reels bundle with 35 professional templates and music suggestions.', 149, 12, 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400'],
+            ['Reels Bundle रु199', 'Premium reels bundle with 45 templates, transitions, and exclusive effects.', 199, 25, 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400'],
             ['Instagram Reels Master Pack', 'Complete Instagram reels package with 60+ templates, captions, and hashtag suggestions.', 349, 30, 'https://images.unsplash.com/photo-1522542550221-31fd19575a2d?w=400'],
             ['Combo Reels Bundle', 'Special combo pack with Instagram and TikTok reels templates (80+ templates).', 399, 35, 'https://images.unsplash.com/photo-1562577309-4932fdd64cd1?w=400'],
             ['Wedding Reels Template Pack', 'Beautiful wedding reels templates with romantic transitions and music suggestions.', 279, 20, 'https://images.unsplash.com/photo-1519741497674-611481863552?w=400'],
@@ -132,7 +132,7 @@ try {
                 ]);
                 
                 $totalAdded++;
-                echo "  ✓ Added: {$title} (₹{$price})\n";
+                echo "  ✓ Added: {$title} (रु{$price})\n";
             } catch (PDOException $e) {
                 // Skip if product already exists (duplicate title)
                 if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
@@ -166,6 +166,7 @@ try {
     echo "Error: " . $e->getMessage() . "\n";
     exit(1);
 }
+
 
 
 

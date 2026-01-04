@@ -19,6 +19,7 @@ $recentEmails = [];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Send Email - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
     <style>
         .email-form-container {

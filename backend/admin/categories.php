@@ -10,6 +10,7 @@ $apiUrl = '../api/categories.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Categories - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
 </head>
 <body>
@@ -202,6 +203,7 @@ $apiUrl = '../api/categories.php';
     </script>
 </body>
 </html>
+
 
 
 

@@ -23,11 +23,15 @@ switch ($method) {
                             WHERE setting_key LIKE 'website_%' 
                             OR setting_key LIKE 'logo_%' 
                             OR setting_key LIKE '%_url' 
+                            OR setting_key LIKE '%_name'
                             OR setting_key LIKE 'contact_%' 
                             OR setting_key LIKE 'footer_%'
                             OR setting_key LIKE 'product_card_%'
+                            OR setting_key LIKE 'product_details_%'
+                            OR setting_key LIKE 'homepage_banner_%'
                             OR setting_key LIKE 'banner%'
-                            OR setting_key LIKE 'popup%'");
+                            OR setting_key LIKE 'popup%'
+                            OR setting_key = 'website_favicon'");
         $settings = $stmt->fetchAll();
         
         $settingsArray = [];
@@ -38,16 +42,27 @@ switch ($method) {
         // Set defaults if not found
         $defaults = [
             'website_logo' => '',
+            'website_favicon' => '',
             'logo_text_line1' => 'Hamro Digi',
             'logo_text_line2' => 'CART',
             'website_title' => 'Hamro Digi Cart',
-            'website_tagline' => 'Best Digital Product In India',
+            'website_tagline' => 'Best Digital Product In Nepal',
             'website_description' => '',
             'facebook_url' => '',
+            'facebook_name' => 'Facebook',
+            'facebook_icon_url' => '',
             'instagram_url' => '',
+            'instagram_name' => 'Instagram',
+            'instagram_icon_url' => '',
             'youtube_url' => '',
+            'youtube_name' => 'YouTube',
+            'youtube_icon_url' => '',
             'twitter_url' => '',
+            'twitter_name' => 'Twitter/X',
+            'twitter_icon_url' => '',
             'whatsapp_url' => '',
+            'whatsapp_name' => 'WhatsApp',
+            'whatsapp_icon_url' => '',
             'footer_copyright' => 'Copyright (c) ' . date('Y'),
             'contact_email' => '',
             'contact_phone' => '',
@@ -68,6 +83,11 @@ switch ($method) {
             'banner2_title' => 'WE ARE Creators DIGITAL PRODUCT',
             'banner2_subtitle' => 'Digital Products Selling Website',
             'banner2_image' => '',
+            // Homepage banner slider settings
+            'homepage_banner_autoplay' => '0',
+            'homepage_banner_duration' => '5',
+            'homepage_banner_height' => '260',
+            'homepage_banner_animation' => 'slide',
             'popup_enabled' => '0',
             'popup_title' => '',
             'popup_content' => '',

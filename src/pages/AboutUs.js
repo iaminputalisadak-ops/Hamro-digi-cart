@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { fetchPageByKey } from '../utils/pageService';
 import './PageTemplate.css';
 
 const AboutUs = () => {
   const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const loadContent = () => {
-    const savedContent = localStorage.getItem('page_about-us');
-    if (savedContent) {
-      setContent(savedContent);
-    } else {
-      // Default dummy content
-      setContent(`
+  const loadContent = async () => {
+    try {
+      setLoading(true);
+      const page = await fetchPageByKey('about-us');
+      
+      if (page && page.content) {
+        setContent(page.content);
+      } else {
+        // Default content if page doesn't exist in database
+        setContent(`
         <h1>About Us</h1>
         <p>Welcome to <strong>Hamro DIGI CART</strong>, your premier destination for digital products in India. We are a leading platform dedicated to providing high-quality digital content that helps creators, businesses, and individuals grow their online presence.</p>
         
@@ -55,35 +60,32 @@ const AboutUs = () => {
         
         <p>Thank you for choosing Hamro DIGI CART. We look forward to helping you create amazing content!</p>
       `);
+      }
+    } catch (error) {
+      console.error('Error loading about us page:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadContent();
-
-    // Listen for page content updates
-    const handlePageContentUpdate = (event) => {
-      if (event.detail && event.detail.pageKey === 'about-us') {
-        loadContent();
-      }
-    };
-
-    window.addEventListener('pageContentUpdated', handlePageContentUpdate);
-
-    // Also listen for storage changes
-    const handleStorageChange = (e) => {
-      if (e.key === 'page_about-us') {
-        loadContent();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('pageContentUpdated', handlePageContentUpdate);
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    
+    // Refresh content every 30 seconds to get updates from admin
+    const interval = setInterval(loadContent, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="page-template">
+        <div className="page-container">
+          <div className="page-loading">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-template">

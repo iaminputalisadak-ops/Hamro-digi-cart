@@ -25,7 +25,12 @@ switch ($method) {
             $setting = $stmt->fetch();
             
             if ($setting) {
-                sendSuccess(['value' => $setting['setting_value']]);
+                // Never return SMTP password to the browser
+                if ($_GET['key'] === 'smtp_password') {
+                    sendSuccess(['value' => '']);
+                } else {
+                    sendSuccess(['value' => $setting['setting_value']]);
+                }
             } else {
                 sendSuccess(['value' => null]);
             }
@@ -35,7 +40,12 @@ switch ($method) {
             
             $settingsArray = [];
             foreach ($settings as $setting) {
-                $settingsArray[$setting['setting_key']] = $setting['setting_value'];
+                // Never return SMTP password to the browser
+                if ($setting['setting_key'] === 'smtp_password') {
+                    $settingsArray[$setting['setting_key']] = '';
+                } else {
+                    $settingsArray[$setting['setting_key']] = $setting['setting_value'];
+                }
             }
             
             sendSuccess($settingsArray);
@@ -63,16 +73,33 @@ switch ($method) {
         }
         
         try {
+            $key = $data['key'];
+            $value = $data['value'];
+
+            // Encrypt SMTP password before storing (do not keep plaintext in DB)
+            if ($key === 'smtp_password') {
+                // If empty, keep existing password unchanged (allows updating host/port without re-entering)
+                if (!is_string($value) || trim($value) === '') {
+                    ob_end_clean();
+                    sendSuccess([], 'SMTP password unchanged');
+                    exit;
+                }
+                $value = encryptSensitiveValue($value);
+            }
+
             $stmt = $pdo->prepare("INSERT INTO settings (setting_key, setting_value) 
                                    VALUES (?, ?) 
                                    ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = CURRENT_TIMESTAMP");
-            $stmt->execute([$data['key'], $data['value'], $data['value']]);
+            $stmt->execute([$key, $value, $value]);
             
             ob_end_clean();
             sendSuccess([], 'Setting saved successfully');
         } catch (PDOException $e) {
             ob_end_clean();
             sendError('Database error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            ob_end_clean();
+            sendError('Error saving setting: ' . $e->getMessage());
         }
         break;
         
@@ -80,6 +107,7 @@ switch ($method) {
         ob_end_clean();
         sendError('Method not allowed', 405);
 }
+
 
 
 

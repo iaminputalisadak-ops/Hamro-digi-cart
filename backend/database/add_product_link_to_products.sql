@@ -4,3 +4,4 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS product_link TEXT AFTER image;
 
 
 
+

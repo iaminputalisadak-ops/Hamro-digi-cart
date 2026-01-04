@@ -10,6 +10,7 @@ $apiUrl = '../api/orders.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orders - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
 </head>
 <body>
@@ -41,7 +42,7 @@ $apiUrl = '../api/orders.php';
                                 <th>Amount</th>
                                 <th>Status</th>
                                 <th>Payment Proof</th>
-                                <th>Date</th>
+                                <th>Date & Time</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -86,7 +87,9 @@ $apiUrl = '../api/orders.php';
     
     <script src="assets/admin.js"></script>
     <script>
-        const apiUrl = '<?php echo $apiUrl; ?>';
+        // Make sure functions are in global scope
+        window.apiUrl = '<?php echo $apiUrl; ?>';
+        const apiUrl = window.apiUrl;
         let currentOrderId = null;
         
         // Global escapeHtml function to prevent XSS
@@ -135,7 +138,7 @@ $apiUrl = '../api/orders.php';
         `;
         document.head.appendChild(style);
         
-        function loadOrders() {
+        window.loadOrders = function() {
             const status = document.getElementById('statusFilter').value;
             const url = status ? `${apiUrl}?status=${status}` : apiUrl;
             
@@ -143,12 +146,36 @@ $apiUrl = '../api/orders.php';
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        displayOrders(data.data);
+                        window.displayOrders(data.data);
+                        // Handle deep links: /admin/orders.php?order_id=123&quick_action=approved|rejected
+                        try {
+                            const params = new URLSearchParams(window.location.search);
+                            const orderId = params.get('order_id');
+                            const quickAction = params.get('quick_action'); // approved | rejected
+                            if (orderId) {
+                                // Open order details for context
+                                setTimeout(() => {
+                                    if (typeof window.openOrderDetails === 'function') {
+                                        window.openOrderDetails(parseInt(orderId, 10));
+                                    }
+                                }, 50);
+                            }
+                            if (orderId && quickAction && (quickAction === 'approved' || quickAction === 'rejected')) {
+                                setTimeout(() => {
+                                    const ok = confirm(`Do you want to ${quickAction.toUpperCase()} Order #${orderId}?`);
+                                    if (ok) {
+                                        window.updateOrderStatus(parseInt(orderId, 10), quickAction);
+                                    }
+                                }, 120);
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
                     }
                 });
-        }
+        };
         
-        function displayOrders(orders) {
+        window.displayOrders = function(orders) {
             const tbody = document.getElementById('orders-table');
             if (orders.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8">No orders found</td></tr>';
@@ -161,7 +188,9 @@ $apiUrl = '../api/orders.php';
                 const phone = escapeHtml(order.customer_phone || 'N/A');
                 const productTitle = escapeHtml(order.product_title || 'N/A');
                 const amount = parseFloat(order.total_amount || 0).toFixed(2);
-                const date = new Date(order.created_at).toLocaleDateString();
+                const dateObj = new Date(order.created_at);
+                const date = dateObj.toLocaleDateString();
+                const time = dateObj.toLocaleTimeString();
                 const screenshotUrl = order.payment_screenshot ? escapeHtml(order.payment_screenshot) : '';
                 
                 return `
@@ -172,7 +201,7 @@ $apiUrl = '../api/orders.php';
                         <small style="color: #7f8c8d;">📞 ${phone}</small>
                     </td>
                     <td>${productTitle}</td>
-                    <td>₹${amount}</td>
+                    <td>रु${amount}</td>
                     <td><span class="status-badge status-${order.status}">${order.status}</span></td>
                     <td>
                         ${screenshotUrl ? 
@@ -180,7 +209,10 @@ $apiUrl = '../api/orders.php';
                             '<span style="color: #7f8c8d;">No proof</span>'
                         }
                     </td>
-                    <td>${date}</td>
+                    <td>
+                        <div>${date}</div>
+                        <small style="color: #7f8c8d;">${time}</small>
+                    </td>
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-primary btn-small" onclick="openOrderDetails(${order.id})">📋 Details</button>
@@ -221,13 +253,13 @@ $apiUrl = '../api/orders.php';
             document.getElementById('screenshotModal').style.display = 'flex';
         }
         
-        function closeScreenshotModal() {
+        window.closeScreenshotModal = function() {
             document.getElementById('screenshotModal').style.display = 'none';
             currentOrderId = null;
             document.getElementById('screenshotModal').removeAttribute('data-order-id');
         }
         
-        function updateOrderStatusFromScreenshot(status) {
+        window.updateOrderStatusFromScreenshot = function(status) {
             // Try to get order ID from multiple sources
             const modal = document.getElementById('screenshotModal');
             const orderId = currentOrderId || modal.getAttribute('data-order-id');
@@ -237,10 +269,10 @@ $apiUrl = '../api/orders.php';
                 return;
             }
             
-            updateOrderStatus(orderId, status);
-        }
+            window.updateOrderStatus(orderId, status);
+        };
         
-        function updateOrderStatus(orderId, status) {
+        window.updateOrderStatus = function(orderId, status) {
             // Validate orderId - handle both number and string
             if (!orderId || orderId === 'null' || orderId === 'undefined') {
                 alert('Error: Order ID is required');
@@ -271,12 +303,12 @@ $apiUrl = '../api/orders.php';
                 .then(data => {
                     if (data.success) {
                         if (document.getElementById('screenshotModal').style.display !== 'none') {
-                            closeScreenshotModal();
+                            window.closeScreenshotModal();
                         }
                         if (document.getElementById('orderDetailsModal').style.display !== 'none') {
-                            closeOrderDetailsModal();
+                            window.closeOrderDetailsModal();
                         }
-                        loadOrders();
+                        window.loadOrders();
                         if (status === 'approved') {
                             showNotification('Order approved successfully! Product link will be automatically sent to customer.', 'success');
                         } else {
@@ -291,55 +323,103 @@ $apiUrl = '../api/orders.php';
                     alert('Error: ' + error.message);
                 });
             }
-        }
+        };
         
-        function deleteOrder(orderId) {
+        window.deleteOrder = function(orderId) {
+            console.log('deleteOrder called with:', orderId);
             if (!orderId) {
                 alert('Error: Order ID is required');
                 return;
             }
             
-            if (confirm('Are you sure you want to delete this order?')) {
-                fetch(`${apiUrl}?id=${orderId}`, { method: 'DELETE' })
-                    .then(res => res.json())
+            // Convert to number if it's a string
+            const numericOrderId = parseInt(orderId, 10);
+            if (isNaN(numericOrderId) || numericOrderId <= 0) {
+                alert('Error: Invalid Order ID');
+                return;
+            }
+            
+            const confirmMsg =
+                `⚠️ Permanent Delete\n\n` +
+                `This will permanently delete Order #${numericOrderId} from the database and remove any uploaded payment proof images from the server.\n\n` +
+                `This action cannot be undone.\n\n` +
+                `Do you want to continue?`;
+            if (confirm(confirmMsg)) {
+                fetch(`${apiUrl}?id=${numericOrderId}`, { method: 'DELETE' })
+                    .then(res => {
+                        if (!res.ok) {
+                            throw new Error(`HTTP error! status: ${res.status}`);
+                        }
+                        return res.json();
+                    })
                     .then(data => {
                         if (data.success) {
-                            loadOrders();
+                            showNotification('Order deleted successfully!', 'success');
+                            window.loadOrders();
                         } else {
-                            alert('Error: ' + data.error);
+                            alert('Error: ' + (data.error || 'Failed to delete order'));
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting order:', error);
+                        alert('Error: ' + error.message);
                     });
             }
-        }
+        };
         
-        function openOrderDetails(orderId) {
-            currentOrderId = orderId;
+        window.openOrderDetails = function(orderId) {
+            console.log('openOrderDetails called with:', orderId);
+            if (!orderId) {
+                alert('Error: Order ID is required');
+                return;
+            }
+            
+            // Convert to number if it's a string
+            const numericOrderId = parseInt(orderId, 10);
+            if (isNaN(numericOrderId) || numericOrderId <= 0) {
+                alert('Error: Invalid Order ID');
+                return;
+            }
+            
+            currentOrderId = numericOrderId;
             document.getElementById('orderDetailsModal').style.display = 'flex';
             
+            // Show loading state
+            document.getElementById('orderDetailsContent').innerHTML = 
+                '<div style="text-align: center; padding: 20px;"><div class="loading-spinner">Loading...</div></div>';
+            
             // Load order details
-            fetch(`${apiUrl}?id=${orderId}`)
-                .then(res => res.json())
+            fetch(`${apiUrl}?id=${numericOrderId}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    if (data.success && data.data) {
                         displayOrderDetails(data.data);
                     } else {
                         document.getElementById('orderDetailsContent').innerHTML = 
-                            '<div style="color: red; text-align: center; padding: 20px;">Error loading order details</div>';
+                            '<div style="color: red; text-align: center; padding: 20px;">Error: ' + (data.error || 'Failed to load order details') + '</div>';
                     }
                 })
                 .catch(error => {
+                    console.error('Error loading order details:', error);
                     document.getElementById('orderDetailsContent').innerHTML = 
                         '<div style="color: red; text-align: center; padding: 20px;">Error: ' + error.message + '</div>';
                 });
-        }
+        };
         
-        function displayOrderDetails(order) {
+        window.displayOrderDetails = function(order) {
             // Use global escapeHtml function
             const email = escapeHtml(order.customer_email || 'N/A');
             const phone = escapeHtml(order.customer_phone || 'N/A');
             const productTitle = escapeHtml(order.product_title || 'N/A');
             const amount = parseFloat(order.total_amount || 0).toFixed(2);
-            const date = new Date(order.created_at).toLocaleDateString();
+            const dateObj = new Date(order.created_at);
+            const date = dateObj.toLocaleDateString();
+            const time = dateObj.toLocaleTimeString();
             const status = order.status || 'pending';
             const productLink = escapeHtml(order.product_link || '');
             const notes = escapeHtml(order.notes || '');
@@ -361,13 +441,13 @@ $apiUrl = '../api/orders.php';
                             <strong>Product:</strong> ${productTitle}
                         </div>
                         <div style="margin-bottom: 10px;">
-                            <strong>Amount:</strong> ₹${amount}
+                            <strong>Amount:</strong> रु${amount}
                         </div>
                         <div style="margin-bottom: 10px;">
                             <strong>Status:</strong> <span class="status-badge status-${status}">${status}</span>
                         </div>
                         <div style="margin-bottom: 10px;">
-                            <strong>Date:</strong> ${date}
+                            <strong>Date:</strong> ${date} <strong>Time:</strong> ${time}
                         </div>
                         ${notes ? `<div style="margin-bottom: 10px;"><strong>Notes:</strong> ${notes}</div>` : ''}
                     </div>
@@ -433,12 +513,12 @@ $apiUrl = '../api/orders.php';
             `;
         }
         
-        function closeOrderDetailsModal() {
+        window.closeOrderDetailsModal = function() {
             document.getElementById('orderDetailsModal').style.display = 'none';
             currentOrderId = null;
-        }
+        };
         
-        function saveProductLink(orderId) {
+        window.saveProductLink = function(orderId) {
             if (!orderId) {
                 alert('Error: Order ID is required');
                 return;
@@ -461,8 +541,8 @@ $apiUrl = '../api/orders.php';
                 if (data.success) {
                     showNotification('Product link saved successfully!', 'success');
                     // Reload order details
-                    openOrderDetails(orderId);
-                    loadOrders();
+                    window.openOrderDetails(orderId);
+                    window.loadOrders();
                 } else {
                     alert('Error: ' + data.error);
                 }
@@ -470,16 +550,16 @@ $apiUrl = '../api/orders.php';
             .catch(error => {
                 alert('Error: ' + error.message);
             });
-        }
+        };
         
         // This function is no longer needed - approval now automatically sends email
         // Keeping for backward compatibility but not used in UI
         
-        function sendProductLinkWithEvent(orderId, customerEmail, event) {
-            sendProductLink(orderId, customerEmail, false, event);
-        }
+        window.sendProductLinkWithEvent = function(orderId, customerEmail, event) {
+            window.sendProductLink(orderId, customerEmail, false, event);
+        };
         
-        function sendProductLink(orderId, customerEmail, autoVerify = false, event = null) {
+        window.sendProductLink = function(orderId, customerEmail, autoVerify = false, event = null) {
             if (!orderId) {
                 alert('Error: Order ID is required');
                 return;
@@ -594,11 +674,11 @@ $apiUrl = '../api/orders.php';
                         if (emailResult && emailResult.success) {
                             showNotification('✅ Product link sent to ' + customerEmail + ' successfully!', 'success');
                             if (autoVerify) {
-                                loadOrders();
-                                closeOrderDetailsModal();
+                                window.loadOrders();
+                                window.closeOrderDetailsModal();
                             } else {
                                 // Reload order details to show updated status
-                                openOrderDetails(orderId);
+                                window.openOrderDetails(orderId);
                             }
                         } else {
                             const errorMsg = emailResult?.error || emailResult?.message || 'Unknown error. Please check SMTP settings.';
@@ -655,21 +735,21 @@ $apiUrl = '../api/orders.php';
                         sendButton.textContent = originalText;
                     }
                 });
-        }
+        };
         
         document.getElementById('screenshotModal').addEventListener('click', function(e) {
             if (e.target === this) {
-                closeScreenshotModal();
+                window.closeScreenshotModal();
             }
         });
         
         document.getElementById('orderDetailsModal').addEventListener('click', function(e) {
             if (e.target === this) {
-                closeOrderDetailsModal();
+                window.closeOrderDetailsModal();
             }
         });
         
-        loadOrders();
+        window.loadOrders();
     </script>
 </body>
 </html>

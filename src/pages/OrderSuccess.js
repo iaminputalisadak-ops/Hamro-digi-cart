@@ -1,11 +1,22 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { stripHTMLSimple } from '../utils/htmlUtils';
 import './OrderSuccess.css';
 
 const OrderSuccess = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { order } = location.state || {};
+
+    // Handle logo/Home link click - refresh if on homepage, navigate otherwise
+    const handleHomeLinkClick = (e) => {
+        if (location.pathname === '/') {
+            // If already on homepage, refresh the page
+            e.preventDefault();
+            window.location.reload();
+        }
+        // Otherwise let React Router handle navigation normally
+    };
 
     useEffect(() => {
         // Scroll to top on mount
@@ -23,10 +34,12 @@ const OrderSuccess = () => {
     if (!order) {
         return (
             <div className="order-success-page">
-                <div className="success-header">
-                    <h1>No Order Found</h1>
-                    <p>Redirecting you to home page...</p>
-                    <Link to="/" className="btn-home">Go Home Now</Link>
+                <div className="order-success-content">
+                    <div className="success-header">
+                        <h1>No Order Found</h1>
+                        <p>Redirecting you to home page...</p>
+                        <Link to="/" className="btn-home">Go Home Now</Link>
+                    </div>
                 </div>
             </div>
         );
@@ -34,6 +47,7 @@ const OrderSuccess = () => {
 
     return (
         <div className="order-success-page">
+            <div className="order-success-content">
             <div className="success-header">
                 <div className="success-icon-container">
                     <div className="success-icon"></div>
@@ -57,7 +71,7 @@ const OrderSuccess = () => {
 
                 <div className="detail-row">
                     <span className="detail-label">Product:</span>
-                    <span className="detail-value">{order.productTitle}</span>
+                    <span className="detail-value">{stripHTMLSimple(order.productTitle || '')}</span>
                 </div>
 
                 <div className="detail-row">
@@ -67,7 +81,13 @@ const OrderSuccess = () => {
 
                 <div className="detail-row">
                     <span className="detail-label">Total Amount:</span>
-                    <span className="detail-value amount-value">Rs. {order.totalAmount}</span>
+                    <span className="detail-value amount-value">
+                        Rs. {order.totalAmount 
+                            ? parseFloat(order.totalAmount).toFixed(2) 
+                            : order.total_amount 
+                                ? parseFloat(order.total_amount).toFixed(2)
+                                : '0.00'}
+                    </span>
                 </div>
 
                 <div className="detail-row">
@@ -113,6 +133,7 @@ const OrderSuccess = () => {
                 <Link to={`/product/${order.productId}`} className="btn-view">
                     <span>👁️</span> View Product
                 </Link>
+            </div>
             </div>
         </div>
     );

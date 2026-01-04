@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
 </head>
 <body>
@@ -53,6 +54,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="admin-content">
                 <h1>Settings</h1>
                 
+                <!-- Site Branding (Logo + Favicon) -->
+                <div class="data-table" style="max-width: 600px; margin-bottom: 30px;">
+                    <h2 style="margin-bottom: 20px; padding: 20px 20px 0;">🖼️ Site Branding</h2>
+                    <p style="padding: 0 20px; color: #666; margin-bottom: 20px;">
+                        Upload your site logo (used in frontend header + admin sidebar) and favicon (browser tab icon).
+                    </p>
+
+                    <div id="brandingMessage" style="display: none; padding: 15px; margin: 20px; border-radius: 5px;"></div>
+
+                    <form id="brandingForm" style="padding: 20px;">
+                        <div class="form-group">
+                            <label>Site Logo (PNG/JPG)</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <div style="flex: 1;">
+                                    <input type="file" id="siteLogoFile" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style="margin-bottom: 10px;">
+                                    <input type="hidden" id="siteLogoUrl" value="">
+                                </div>
+                                <div id="siteLogoPreview" style="width: 150px; height: 150px; border: 2px dashed #ddd; border-radius: 5px; display: none; align-items: center; justify-content: center; overflow: hidden; background: #f9f9f9;">
+                                    <img id="siteLogoPreviewImg" src="" alt="Logo Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                </div>
+                            </div>
+                            <small style="color: #666;">Recommended: transparent PNG, 300×120 or similar.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Favicon (PNG/JPG/ICO)</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <div style="flex: 1;">
+                                    <input type="file" id="faviconFile" accept=".png,.jpg,.jpeg,.ico,image/png,image/jpeg,image/x-icon,image/vnd.microsoft.icon" style="margin-bottom: 10px;">
+                                    <input type="hidden" id="faviconUrl" value="">
+                                </div>
+                                <div id="faviconPreview" style="width: 64px; height: 64px; border: 2px dashed #ddd; border-radius: 5px; display: none; align-items: center; justify-content: center; overflow: hidden; background: #f9f9f9;">
+                                    <img id="faviconPreviewImg" src="" alt="Favicon Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                </div>
+                            </div>
+                            <small style="color: #666;">Recommended: 32×32 PNG or .ico file.</small>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button type="submit" class="btn btn-primary">💾 Save Logo & Favicon</button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Change Password Section -->
                 <div class="data-table" style="max-width: 600px; margin-bottom: 30px;">
                     <h2 style="margin-bottom: 20px; padding: 20px 20px 0;">Change Password</h2>
@@ -100,6 +145,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <div id="smtpMessage" style="display: none; padding: 15px; margin: 20px; border-radius: 5px;"></div>
                     
+                    <div id="smtpHelp" style="display: none; padding: 15px; margin: 20px; border-radius: 5px; background: #fff3cd; border-left: 4px solid #f59e0b;">
+                        <strong>💡 Troubleshooting Tip:</strong>
+                        <p style="margin: 10px 0 0 0;">If you get "Connection timed out" errors, your hosting provider may be blocking port 587. Try switching to:</p>
+                        <ul style="margin: 10px 0 0 20px;">
+                            <li><strong>Port:</strong> 465</li>
+                            <li><strong>Encryption:</strong> SSL</li>
+                        </ul>
+                        <p style="margin: 10px 0 0 0;">The system will automatically try SSL as a fallback, but you can also manually change these settings.</p>
+                    </div>
+                    
                     <form id="smtpForm" style="padding: 20px;">
                         <div class="form-group">
                             <label>SMTP Host</label>
@@ -131,10 +186,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-group">
                             <label>SMTP Password</label>
                             <div style="position: relative;">
-                                <input type="password" id="smtpPassword" placeholder="Your email password or app password" required style="padding-right: 40px;">
+                                <input type="password" id="smtpPassword" placeholder="Leave blank to keep existing password" style="padding-right: 40px;">
                                 <button type="button" id="togglePassword" onclick="togglePasswordVisibility()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px;">👁️</button>
                             </div>
-                            <small style="color: #666;">For Gmail, use App Password (not regular password). Click 👁️ to show/hide password. Spaces in App Password (like "qtsi ihcd gusz xmoo") are preserved.</small>
+                            <small style="color: #666;">For security, the saved password is not shown. Leave blank to keep the existing password. For Gmail, use an App Password (spaces are preserved).</small>
                         </div>
                         
                         <div class="form-group">
@@ -185,6 +240,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="assets/admin.js"></script>
     <script>
         const settingsApiUrl = '../api/settings.php';
+        const uploadApiUrl = '../api/upload.php';
+
+        // Shared message helper
+        function showBrandingMessage(text, type) {
+            const el = document.getElementById('brandingMessage');
+            if (!el) return;
+            el.style.display = 'block';
+            el.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            el.style.color = type === 'success' ? '#155724' : '#721c24';
+            el.textContent = text;
+        }
+
+        function isAllowedImageFile(file, allowIco = false) {
+            if (!file) return false;
+            const name = (file.name || '').toLowerCase();
+            const ext = name.split('.').pop();
+            const mime = (file.type || '').toLowerCase();
+            const isJpg = ext === 'jpg' || ext === 'jpeg' || mime === 'image/jpeg';
+            const isPng = ext === 'png' || mime === 'image/png';
+            const isIco = ext === 'ico' || mime === 'image/x-icon' || mime === 'image/vnd.microsoft.icon';
+            return allowIco ? (isJpg || isPng || isIco) : (isJpg || isPng);
+        }
+
+        async function uploadSelectedFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch(uploadApiUrl, { method: 'POST', body: formData });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Upload failed');
+            // API may return {data:{url}} or {url}
+            const url = (data.data && data.data.url) ? data.data.url : data.url;
+            if (!url) throw new Error('Upload succeeded but no URL returned');
+            return url;
+        }
+
+        async function saveSetting(key, value) {
+            const res = await fetch(settingsApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, value })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Save failed');
+            return true;
+        }
+
+        function applyFaviconToHead(url) {
+            try {
+                const existing = document.querySelectorAll('link[rel*=\"icon\"]');
+                existing.forEach(l => l.remove());
+                const link = document.createElement('link');
+                link.rel = 'icon';
+                link.href = url;
+                document.head.appendChild(link);
+                const shortcut = document.createElement('link');
+                shortcut.rel = 'shortcut icon';
+                shortcut.href = url;
+                document.head.appendChild(shortcut);
+            } catch (e) {}
+        }
+
+        function updateAdminSidebarLogo(url) {
+            const sidebarHeader = document.querySelector('.admin-sidebar .sidebar-header');
+            if (!sidebarHeader) return;
+            let img = sidebarHeader.querySelector('img[alt=\"Site Logo\"]');
+            if (!img) {
+                const wrap = document.createElement('div');
+                wrap.style.display = 'flex';
+                wrap.style.justifyContent = 'center';
+                wrap.style.marginBottom = '10px';
+                img = document.createElement('img');
+                img.alt = 'Site Logo';
+                img.style.maxWidth = '120px';
+                img.style.maxHeight = '60px';
+                img.style.objectFit = 'contain';
+                wrap.appendChild(img);
+                sidebarHeader.insertBefore(wrap, sidebarHeader.firstChild);
+            }
+            img.src = url;
+        }
         
         // Load existing SMTP settings
         function loadSMTPSettings() {
@@ -196,12 +331,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (data.data.smtp_port) document.getElementById('smtpPort').value = data.data.smtp_port;
                         if (data.data.smtp_encryption) document.getElementById('smtpEncryption').value = data.data.smtp_encryption;
                         if (data.data.smtp_email) document.getElementById('smtpEmail').value = data.data.smtp_email;
-                        if (data.data.smtp_password) document.getElementById('smtpPassword').value = data.data.smtp_password;
+                        // Never prefill password (API masks it for security)
                         if (data.data.smtp_from_name) document.getElementById('smtpFromName').value = data.data.smtp_from_name;
                     }
                 })
                 .catch(error => console.error('Error loading settings:', error));
         }
+
+        // Load existing branding settings
+        function loadBrandingSettings() {
+            fetch(settingsApiUrl)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) return;
+                    const logoUrl = data.data.website_logo || '';
+                    const faviconUrl = data.data.website_favicon || '';
+
+                    document.getElementById('siteLogoUrl').value = logoUrl;
+                    document.getElementById('faviconUrl').value = faviconUrl;
+
+                    const logoPreview = document.getElementById('siteLogoPreview');
+                    const logoPreviewImg = document.getElementById('siteLogoPreviewImg');
+                    if (logoUrl) {
+                        logoPreviewImg.src = logoUrl;
+                        logoPreview.style.display = 'flex';
+                    }
+
+                    const faviconPreview = document.getElementById('faviconPreview');
+                    const faviconPreviewImg = document.getElementById('faviconPreviewImg');
+                    if (faviconUrl) {
+                        faviconPreviewImg.src = faviconUrl;
+                        faviconPreview.style.display = 'flex';
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // Branding previews
+        document.getElementById('siteLogoFile').addEventListener('change', function() {
+            const file = this.files && this.files[0];
+            if (!file) return;
+            if (!isAllowedImageFile(file, false)) {
+                showBrandingMessage('Invalid logo file type. Allowed: PNG, JPG', 'error');
+                this.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('siteLogoPreviewImg').src = e.target.result;
+                document.getElementById('siteLogoPreview').style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('faviconFile').addEventListener('change', function() {
+            const file = this.files && this.files[0];
+            if (!file) return;
+            if (!isAllowedImageFile(file, true)) {
+                showBrandingMessage('Invalid favicon file type. Allowed: PNG, JPG, ICO', 'error');
+                this.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('faviconPreviewImg').src = e.target.result;
+                document.getElementById('faviconPreview').style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Save branding settings
+        document.getElementById('brandingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            showBrandingMessage('Saving...', 'success');
+
+            try {
+                let logoUrl = document.getElementById('siteLogoUrl').value || '';
+                let faviconUrl = document.getElementById('faviconUrl').value || '';
+
+                const logoFile = document.getElementById('siteLogoFile').files?.[0];
+                const faviconFile = document.getElementById('faviconFile').files?.[0];
+
+                if (logoFile) {
+                    if (!isAllowedImageFile(logoFile, false)) throw new Error('Invalid logo file type. Allowed: PNG, JPG');
+                    logoUrl = await uploadSelectedFile(logoFile);
+                    document.getElementById('siteLogoUrl').value = logoUrl;
+                }
+
+                if (faviconFile) {
+                    if (!isAllowedImageFile(faviconFile, true)) throw new Error('Invalid favicon file type. Allowed: PNG, JPG, ICO');
+                    faviconUrl = await uploadSelectedFile(faviconFile);
+                    document.getElementById('faviconUrl').value = faviconUrl;
+                }
+
+                // Persist to database
+                if (logoUrl) await saveSetting('website_logo', logoUrl);
+                if (faviconUrl) await saveSetting('website_favicon', faviconUrl);
+
+                // Apply immediately in admin UI
+                if (faviconUrl) applyFaviconToHead(faviconUrl);
+                if (logoUrl) updateAdminSidebarLogo(logoUrl);
+
+                showBrandingMessage('Logo and favicon saved successfully!', 'success');
+            } catch (err) {
+                showBrandingMessage('Error saving branding: ' + (err.message || err), 'error');
+            }
+        });
         
         // Save SMTP settings
         document.getElementById('smtpForm').addEventListener('submit', async function(e) {
@@ -215,13 +450,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 smtp_port: document.getElementById('smtpPort').value.trim(),
                 smtp_encryption: document.getElementById('smtpEncryption').value.trim(),
                 smtp_email: document.getElementById('smtpEmail').value.trim(),
-                smtp_password: passwordValue, // Don't trim password - preserve spaces for App Passwords
+                smtp_password: passwordValue, // Leave blank to keep existing; don't trim to preserve spaces
                 smtp_from_name: (document.getElementById('smtpFromName').value || 'Hamro Digi Cart').trim()
             };
             
             // Validate required fields
-            if (!settings.smtp_host || !settings.smtp_email || !settings.smtp_password) {
-                showMessage('Please fill in all required SMTP fields (Host, Email, and Password)', 'error');
+            if (!settings.smtp_host || !settings.smtp_email) {
+                showMessage('Please fill in all required SMTP fields (Host and Email).', 'error');
                 return;
             }
             
@@ -265,8 +500,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 .then(data => {
                     if (data.success) {
                         showMessage('Test email sent! Check your inbox.', 'success');
+                        document.getElementById('smtpHelp').style.display = 'none';
                     } else {
-                        showMessage('Error: ' + data.error, 'error');
+                        const errorMsg = data.error || 'Unknown error';
+                        showMessage('Error: ' + errorMsg, 'error');
+                        
+                        // Show help if timeout or connection error
+                        if (errorMsg.includes('timed out') || errorMsg.includes('Connection failed') || errorMsg.includes('110')) {
+                            document.getElementById('smtpHelp').style.display = 'block';
+                        }
                     }
                 })
                 .catch(error => {
@@ -320,6 +562,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Load settings on page load
+        loadBrandingSettings();
         loadSMTPSettings();
         loadQRCodeSettings();
         

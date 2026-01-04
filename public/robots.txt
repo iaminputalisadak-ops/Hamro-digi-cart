@@ -1,3 +1,28 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /backend/admin/
+Disallow: /backend/api/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /backend/
+Disallow: /product/*/download
+Disallow: /product/*/payment
+Disallow: /order-success
+
+# Allow static files
+Allow: /static/
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.gif$
+Allow: /*.svg$
+Allow: /*.webp$
+Allow: /*.ico$
+
+# Sitemap location
+Sitemap: https://hamrodigicart.com/sitemap.xml

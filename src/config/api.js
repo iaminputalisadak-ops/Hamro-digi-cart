@@ -5,10 +5,11 @@
 
 // For development - adjust this to your backend URL
 // If backend is in same domain: '/backend/api'
-// If backend is on different domain: 'http://localhost/backend/api'
-// For production: 'https://yourdomain.com/backend/api'
+// If backend is on different domain: use environment variable
+// For production: Uses environment variable or defaults to relative path
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// Use relative path in production to avoid localhost references that trigger security warnings
+const API_BASE_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '/backend/api' : 'http://localhost:8000/api');
 
 export default API_BASE_URL;
 

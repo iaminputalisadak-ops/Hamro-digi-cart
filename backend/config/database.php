@@ -5,7 +5,8 @@
 
 // Database credentials
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'digicart');
+define('DB_PORT', '3308');
+define('DB_NAME', 'hamrodigicart');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
@@ -15,7 +16,7 @@ define('DB_CHARSET', 'utf8mb4');
  */
 function getDBConnection() {
     try {
-        $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+        $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

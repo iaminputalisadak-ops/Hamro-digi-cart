@@ -9,6 +9,53 @@ $pdo = getDBConnection();
 
 switch ($method) {
     case 'GET':
+        // Get search suggestions (autocomplete)
+        if (isset($_GET['suggest']) && !empty($_GET['suggest'])) {
+            $query = trim($_GET['suggest']);
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+            
+            if (strlen($query) < 2) {
+                sendSuccess([]);
+                break;
+            }
+            
+            // Get product titles that match the query (limit results for autocomplete)
+            $searchTerm = "%$query%";
+            $exactMatch = "$query%";
+            
+            // Use a simpler query with proper ordering
+            $stmt = $pdo->prepare("SELECT DISTINCT p.id, p.title, c.name as category_name 
+                                   FROM products p 
+                                   LEFT JOIN categories c ON p.category_id = c.id 
+                                   WHERE p.status = 'active' 
+                                   AND (p.title LIKE ? OR p.description LIKE ?)
+                                   ORDER BY p.title ASC
+                                   LIMIT ?");
+            $stmt->execute([$searchTerm, $searchTerm, $limit]);
+            $suggestions = $stmt->fetchAll();
+            
+            // Sort suggestions: exact matches first, then partial matches
+            usort($suggestions, function($a, $b) use ($query) {
+                $aStarts = stripos($a['title'], $query) === 0;
+                $bStarts = stripos($b['title'], $query) === 0;
+                if ($aStarts && !$bStarts) return -1;
+                if (!$aStarts && $bStarts) return 1;
+                return strcasecmp($a['title'], $b['title']);
+            });
+            
+            // Format suggestions for autocomplete
+            $formatted = array_map(function($item) {
+                return [
+                    'id' => $item['id'],
+                    'title' => $item['title'],
+                    'category' => $item['category_name'] ?? ''
+                ];
+            }, $suggestions);
+            
+            sendSuccess($formatted);
+            break;
+        }
+        
         // Get all products or single product
         if (isset($_GET['id'])) {
             $stmt = $pdo->prepare("SELECT p.*, c.name as category_name, c.slug as category_slug 

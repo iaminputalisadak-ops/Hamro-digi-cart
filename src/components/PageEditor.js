@@ -1,22 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { fetchPageByKey } from '../utils/pageService';
+import { apiRequest } from '../config/api';
 import './PageEditor.css';
 
 const PageEditor = ({ pageKey, pageTitle, onSave, onCancel }) => {
   const [content, setContent] = useState('');
   const [editor, setEditor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [pageId, setPageId] = useState(null);
 
   useEffect(() => {
-    // Load existing content from localStorage
-    const savedContent = localStorage.getItem(`page_${pageKey}`);
-    if (savedContent) {
-      setContent(savedContent);
-    } else {
-      // Set default content based on page type
-      const defaultContent = getDefaultContent(pageKey);
-      setContent(defaultContent);
-    }
+    const loadPage = async () => {
+      try {
+        setLoading(true);
+        const page = await fetchPageByKey(pageKey);
+        
+        if (page) {
+          setPageId(page.id);
+          setContent(page.content || '');
+        } else {
+          // Set default content if page doesn't exist
+          const defaultContent = getDefaultContent(pageKey);
+          setContent(defaultContent);
+        }
+      } catch (error) {
+        console.error('Error loading page:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPage();
   }, [pageKey]);
 
   const getDefaultContent = (key) => {
@@ -30,14 +47,50 @@ const PageEditor = ({ pageKey, pageTitle, onSave, onCancel }) => {
     return defaults[key] || '<p>Start editing...</p>';
   };
 
-  const handleSave = () => {
-    localStorage.setItem(`page_${pageKey}`, content);
-    // Dispatch custom event to notify other components of content change
-    window.dispatchEvent(new CustomEvent('pageContentUpdated', { 
-      detail: { pageKey, content } 
-    }));
-    onSave(content);
-    alert('Page content saved successfully! Changes will be reflected on the homepage.');
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      const routeMap = {
+        'about-us': '/about-us',
+        'privacy-policy': '/privacy-policy',
+        'terms-conditions': '/terms-conditions',
+        'refund-policy': '/refund-policy',
+        'contact-us': '/contact-us'
+      };
+
+      if (pageId) {
+        // Update existing page
+        await apiRequest('pages.php', {
+          method: 'PUT',
+          body: JSON.stringify({
+            id: pageId,
+            title: pageTitle,
+            content: content,
+            route: routeMap[pageKey] || `/${pageKey}`
+          })
+        });
+      } else {
+        // Create new page
+        await apiRequest('pages.php', {
+          method: 'POST',
+          body: JSON.stringify({
+            page_key: pageKey,
+            title: pageTitle,
+            content: content,
+            route: routeMap[pageKey] || `/${pageKey}`
+          })
+        });
+      }
+      
+      alert('Page content saved successfully to database! Changes will be reflected immediately.');
+      if (onSave) onSave(content);
+    } catch (error) {
+      console.error('Error saving page:', error);
+      alert('Error saving page. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -120,9 +173,14 @@ const PageEditor = ({ pageKey, pageTitle, onSave, onCancel }) => {
           />
         </div>
         <div className="page-editor-actions">
-          <button onClick={handleSave} className="btn-primary">Save Page</button>
-          <button onClick={onCancel} className="btn-secondary">Cancel</button>
+          <button onClick={handleSave} className="btn-primary" disabled={loading || saving}>
+            {saving ? 'Saving...' : 'Save Page'}
+          </button>
+          <button onClick={onCancel} className="btn-secondary" disabled={saving}>Cancel</button>
         </div>
+        {loading && (
+          <div className="page-editor-loading">Loading page content...</div>
+        )}
       </div>
     </div>
   );

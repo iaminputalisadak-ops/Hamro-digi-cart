@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { fetchProductById } from '../utils/productService';
+import { stripHTMLSimple } from '../utils/htmlUtils';
 import './ProductDownload.css';
 
 const ProductDownload = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [includeUpsell, setIncludeUpsell] = useState(true);
+
+  // Get price data from navigation state (passed from ProductDetails)
+  const { productPrice: passedPrice, productDiscount: passedDiscount, discountedPrice: passedDiscountedPrice } = location.state || {};
 
   useEffect(() => {
+    // Scroll to top on mount and when product ID changes
+    window.scrollTo(0, 0);
+
     const loadProduct = async () => {
       try {
         const foundProduct = await fetchProductById(id);
@@ -30,19 +36,42 @@ const ProductDownload = () => {
     loadProduct();
   }, [id]);
 
+  // Calculate prices function - used in both handlePayment and render
+  const calculatePrices = () => {
+    // Use passed price data if available (for consistency), otherwise use product data from API
+    const calculatedProductPrice = passedPrice !== undefined ? passedPrice : (parseFloat(product?.price) || 0);
+    const calculatedProductDiscount = passedDiscount !== undefined ? passedDiscount : (parseFloat(product?.discount) || 0);
+    const calculatedDiscountedPrice = passedDiscountedPrice !== undefined 
+      ? passedDiscountedPrice 
+      : (calculatedProductDiscount > 0
+          ? Math.round(calculatedProductPrice * (1 - calculatedProductDiscount / 100))
+          : calculatedProductPrice);
+
+    // No upsell calculations - prices are product prices only
+    return {
+      productPrice: calculatedProductPrice,
+      productDiscount: calculatedProductDiscount,
+      discountedPrice: calculatedDiscountedPrice
+    };
+  };
+
   const handlePayment = () => {
     if (!email || !phone) {
       alert('Please fill in your email and phone number to continue.');
       return;
     }
 
-    // Navigate to payment page with state
+    // Calculate prices to ensure consistency
+    const prices = calculatePrices();
+
+    // Navigate to payment page with state - pass price data (product prices only, no upsell)
     navigate(`/product/${id}/payment`, {
       state: {
         email,
         phone,
-        includeUpsell,
-        totalAmount: discountedTotal.toFixed(2)
+        productPrice: prices.productPrice,
+        productDiscount: prices.productDiscount,
+        discountedPrice: prices.discountedPrice
       }
     });
   };
@@ -65,42 +94,29 @@ const ProductDownload = () => {
     );
   }
 
-  // Ensure price is a number
-  const productPrice = parseFloat(product.price) || 0;
-  const productDiscount = parseFloat(product.discount) || 0;
-
-  const discountedPrice = productDiscount > 0
-    ? Math.round(productPrice * (1 - productDiscount / 100))
-    : productPrice;
-
-  const upsellPrice = 99;
-  const originalTotal = productPrice + (includeUpsell ? upsellPrice : 0);
-  const discountedTotal = discountedPrice + (includeUpsell ? upsellPrice : 0);
-  const totalDiscount = includeUpsell
-    ? Math.round(((originalTotal - discountedTotal) / originalTotal) * 100)
-    : productDiscount;
+  // Calculate prices for display (product prices only, no upsell)
+  const { productPrice, productDiscount, discountedPrice } = calculatePrices();
 
   // Get product image
   const productImage = product.image || (product.images && product.images[0] ? product.images[0] : null);
 
-  // Extract number from product title
-  const match = product.title.match(/(\d+)/);
+  // Extract number from product title (strip HTML first)
+  const cleanTitle = stripHTMLSimple(product.title);
+  const match = cleanTitle.match(/(\d+)/);
   const productCount = match ? `${match[1]}+` : '500+';
+
+  // Handle logo/Home link click - refresh if on homepage, navigate otherwise
+  const handleHomeLinkClick = (e) => {
+    if (location.pathname === '/') {
+      // If already on homepage, refresh the page
+      e.preventDefault();
+      window.location.reload();
+    }
+    // Otherwise let React Router handle navigation normally
+  };
 
   return (
     <div className="product-download-page">
-      {/* Top Header Bar */}
-      <div className="download-top-bar">
-        <div className="top-bar-container">
-          <div className="top-bar-logo">
-            <Logo size="small" showText={true} variant="header" />
-          </div>
-          <div className="top-bar-text">
-            Built with ❤️ on DIGICART
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="download-main-content">
         <div className="download-content-container">
@@ -109,7 +125,7 @@ const ProductDownload = () => {
             {/* Product Image */}
             <div className="product-image-section">
               {productImage ? (
-                <img src={productImage} alt={product.title} className="product-main-image" />
+                <img src={productImage} alt={stripHTMLSimple(product.title)} className="product-main-image" />
               ) : (
                 <div className="product-image-placeholder">
                   <span>📦</span>
@@ -120,7 +136,7 @@ const ProductDownload = () => {
             {/* About Section */}
             <div className="about-product-section">
               <h3 className="section-heading">ABOUT THE PRODUCT</h3>
-              <h2 className="product-title-main">{product.title}</h2>
+              <h2 className="product-title-main">{stripHTMLSimple(product.title)}</h2>
             </div>
 
             {/* What's Inside Section */}
@@ -174,21 +190,30 @@ const ProductDownload = () => {
               </div>
             </div>
 
-            {/* Upsell Offer */}
-            <div className="upsell-section">
-              <div className={`upsell-box ${includeUpsell ? 'selected' : ''}`}>
-                <div className="upsell-left">
-                  <div className="upsell-icon">📚</div>
-                  <div className="upsell-content">
-                    <div className="upsell-title">Add Ultimate Editing Course Rs. 99</div>
-                    <div className="upsell-description">One-time offer! Add this pack to skyrocket your growth.</div>
+            {/* Trust & Benefits Section */}
+            <div className="trust-section">
+              <div className="trust-box">
+                <div className="trust-icon">✨</div>
+                <div className="trust-content">
+                  <div className="trust-title">What You'll Get</div>
+                  <div className="trust-items">
+                    <div className="trust-item">
+                      <span className="trust-check">✓</span>
+                      <span>Instant Download Access</span>
+                    </div>
+                    <div className="trust-item">
+                      <span className="trust-check">✓</span>
+                      <span>Lifetime Access to Files</span>
+                    </div>
+                    <div className="trust-item">
+                      <span className="trust-check">✓</span>
+                      <span>No Watermarks Included</span>
+                    </div>
+                    <div className="trust-item">
+                      <span className="trust-check">✓</span>
+                      <span>Premium Quality Content</span>
+                    </div>
                   </div>
-                </div>
-                <div
-                  className="upsell-checkbox"
-                  onClick={() => setIncludeUpsell(!includeUpsell)}
-                >
-                  {includeUpsell && <span className="checkmark">✓</span>}
                 </div>
               </div>
             </div>
@@ -197,21 +222,23 @@ const ProductDownload = () => {
             <div className="pricing-summary">
               <div className="price-row">
                 <span className="price-label">Original Price</span>
-                <span className="price-value original">Rs. {originalTotal.toFixed(2)}</span>
+                <span className="price-value original">Rs. {productPrice}</span>
               </div>
-              <div className="price-row">
-                <span className="price-label">Discount</span>
-                <span className="price-value discount">{totalDiscount}% OFF</span>
-              </div>
+              {productDiscount > 0 && (
+                <div className="price-row">
+                  <span className="price-label">Discount</span>
+                  <span className="price-value discount">{productDiscount}% OFF</span>
+                </div>
+              )}
               <div className="price-row total-row">
                 <span className="price-label">Total Amount</span>
-                <span className="price-value total">Rs. {discountedTotal.toFixed(2)}</span>
+                <span className="price-value total">Rs. {discountedPrice}</span>
               </div>
             </div>
 
             {/* Payment Button */}
             <button className="payment-button" onClick={handlePayment}>
-              Make Payment Rs. {discountedTotal.toFixed(2)} →
+              Make Payment Rs. {discountedPrice} →
             </button>
           </div>
         </div>

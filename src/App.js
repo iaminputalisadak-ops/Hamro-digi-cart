@@ -1,54 +1,66 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
+import { WebsiteSettingsProvider } from './contexts/WebsiteSettingsContext';
 import Layout from './components/Layout';
-import Home from './pages/Home';
-import ProductDetails from './pages/ProductDetails';
-import ProductDownload from './pages/ProductDownload';
-import ProductPayment from './pages/ProductPayment';
-import Search from './pages/Search';
-import AboutUs from './pages/AboutUs';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsConditions from './pages/TermsConditions';
-import RefundPolicy from './pages/RefundPolicy';
-import ContactUs from './pages/ContactUs';
-import OrderSuccess from './pages/OrderSuccess';
 import './App.css';
+
+// Lazy load pages for code splitting and better performance
+const Home = lazy(() => import('./pages/Home'));
+const ProductDetails = lazy(() => import('./pages/ProductDetails'));
+const ProductDownload = lazy(() => import('./pages/ProductDownload'));
+const ProductPayment = lazy(() => import('./pages/ProductPayment'));
+const Search = lazy(() => import('./pages/Search'));
+const AboutUs = lazy(() => import('./pages/AboutUs'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsConditions = lazy(() => import('./pages/TermsConditions'));
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
+
+// Loading component
+const PageLoader = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    minHeight: '50vh',
+    fontSize: '1.2rem',
+    color: '#666'
+  }}>
+    Loading...
+  </div>
+);
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
-            <Route path="whatsapp" element={<Home />} />
-            <Route path="reels-bundle" element={<Home />} />
-            <Route path="combo-reels-bundle" element={<Home />} />
-            <Route path="instagram-reels-bundle" element={<Home />} />
-            <Route path="reels-bundle-99" element={<Home />} />
-            <Route path="reels-bundle-149" element={<Home />} />
-            <Route path="reels-bundle-199" element={<Home />} />
-            <Route path="follow-us" element={<Home />} />
-            <Route path="whatsapp-templates" element={<Home />} />
-            <Route path="digital-planner" element={<Home />} />
-            <Route path="social-media-pack" element={<Home />} />
-            <Route path="video-templates" element={<Home />} />
-            <Route path="tiktok-reel-bundle" element={<Home />} />
-            <Route path="product/:id" element={<ProductDetails />} />
-            <Route path="product/:id/download" element={<ProductDownload />} />
-            <Route path="product/:id/payment" element={<ProductPayment />} />
-            <Route path="search" element={<Search />} />
-            <Route path="about-us" element={<AboutUs />} />
-            <Route path="privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="terms-conditions" element={<TermsConditions />} />
-            <Route path="refund-policy" element={<RefundPolicy />} />
-            <Route path="contact-us" element={<ContactUs />} />
-            <Route path="order-success" element={<OrderSuccess />} />
-            <Route path="digital-planner-2025" element={<Home />} />
-          </Route>
-        </Routes>
-      </div>
-    </Router>
+    <HelmetProvider>
+      <WebsiteSettingsProvider>
+        <Router>
+          <div className="App">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Home />} />
+                  <Route path="product/:id" element={<ProductDetails />} />
+                  <Route path="product/:id/download" element={<ProductDownload />} />
+                  <Route path="product/:id/payment" element={<ProductPayment />} />
+                  <Route path="search" element={<Search />} />
+                  <Route path="about-us" element={<AboutUs />} />
+                  <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="terms-conditions" element={<TermsConditions />} />
+                  <Route path="refund-policy" element={<RefundPolicy />} />
+                  <Route path="contact-us" element={<ContactUs />} />
+                  <Route path="order-success" element={<OrderSuccess />} />
+                  {/* All other routes (offers, categories, legacy routes) are handled by Home component */}
+                  <Route path="*" element={<Home />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </div>
+        </Router>
+      </WebsiteSettingsProvider>
+    </HelmetProvider>
   );
 }
 

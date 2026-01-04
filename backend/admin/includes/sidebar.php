@@ -1,8 +1,14 @@
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
+$siteLogoUrl = function_exists('getWebsiteLogoUrl') ? getWebsiteLogoUrl() : '';
 ?>
 <aside class="admin-sidebar">
     <div class="sidebar-header">
+        <?php if (!empty($siteLogoUrl)): ?>
+            <div style="display:flex; justify-content:center; margin-bottom: 10px;">
+                <img src="<?php echo $siteLogoUrl; ?>" alt="Site Logo" style="max-width: 120px; max-height: 60px; object-fit: contain;">
+            </div>
+        <?php endif; ?>
         <h2>Hamro Digi Cart</h2>
         <p>Admin Panel</p>
     </div>
@@ -35,8 +41,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <a href="product-card-settings.php" class="<?php echo $currentPage === 'product-card-settings.php' ? 'active' : ''; ?>">
             <span>🃏</span> Product Card Settings
         </a>
-        <a href="send-email.php" class="<?php echo $currentPage === 'send-email.php' ? 'active' : ''; ?>">
-            <span>📧</span> Send Email
+        <a href="homepage-banners.php" class="<?php echo $currentPage === 'homepage-banners.php' ? 'active' : ''; ?>">
+            <span>🖼️</span> Homepage Banner Settings
         </a>
     </nav>
     

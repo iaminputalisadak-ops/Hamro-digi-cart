@@ -12,13 +12,14 @@ $pdo = getDBConnection();
 $newPassword = 'admin123';
 $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
 
-$stmt = $pdo->prepare("UPDATE admins SET password = ? WHERE username = 'admin'");
+$stmt = $pdo->prepare("UPDATE admins SET password = ? WHERE username = 'hamrodigicart1'");
 $stmt->execute([$hashedPassword]);
 
 echo "✓ Admin password reset successfully!\n";
-echo "Username: admin\n";
+echo "Username: hamrodigicart1\n";
 echo "Password: admin123\n\n";
 echo "You can now login at: http://localhost:8000/admin/login.php\n";
+
 
 
 

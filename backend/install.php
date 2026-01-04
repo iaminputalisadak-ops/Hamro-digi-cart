@@ -40,9 +40,10 @@ foreach ($statements as $statement) {
 
 echo "Installation completed successfully!\n";
 echo "Default admin credentials:\n";
-echo "Username: admin\n";
+echo "Username: hamrodigicart1\n";
 echo "Password: admin123\n";
 echo "\nPlease change the password after first login!\n";
+
 
 
 

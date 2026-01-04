@@ -11,7 +11,9 @@ $apiUrl = '../api/products.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Products - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
+    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 </head>
 <body>
     <div class="admin-wrapper">
@@ -64,10 +66,11 @@ $apiUrl = '../api/products.php';
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea id="productDescription"></textarea>
+                    <textarea id="productDescription" style="min-height: 200px;"></textarea>
+                    <small style="color: #666; display: block; margin-top: 5px;">Use the rich text editor to format your product description with bold, italic, lists, links, and more.</small>
                 </div>
                 <div class="form-group">
-                    <label>Price (₹) *</label>
+                    <label>Price (रु) *</label>
                     <input type="number" id="productPrice" step="0.01" required>
                 </div>
                 <div class="form-group">
@@ -115,6 +118,36 @@ $apiUrl = '../api/products.php';
     <script src="assets/admin.js"></script>
     <script>
         const apiUrl = '<?php echo $apiUrl; ?>';
+        let descriptionEditor;
+        
+        // Initialize CKEditor for description
+        ClassicEditor
+            .create(document.querySelector('#productDescription'), {
+                toolbar: {
+                    items: [
+                        'heading', '|',
+                        'bold', 'italic', 'link', '|',
+                        'bulletedList', 'numberedList', '|',
+                        'blockQuote', 'insertTable', '|',
+                        'undo', 'redo'
+                    ]
+                },
+                heading: {
+                    options: [
+                        { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                        { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                        { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                        { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+                    ]
+                }
+            })
+            .then(editor => {
+                descriptionEditor = editor;
+                console.log('CKEditor initialized successfully');
+            })
+            .catch(error => {
+                console.error('Error initializing CKEditor:', error);
+            });
         
         // Load products
         function loadProducts() {
@@ -160,7 +193,7 @@ $apiUrl = '../api/products.php';
                         ${hasLink ? '<span style="margin-left: 8px; color: #22c55e; font-size: 12px;" title="Product link configured">🔗</span>' : '<span style="margin-left: 8px; color: #ef4444; font-size: 12px;" title="No product link configured">⚠️</span>'}
                     </td>
                     <td>${product.category_name || 'Uncategorized'}</td>
-                    <td>₹${product.price}</td>
+                    <td>रु${product.price}</td>
                     <td>${product.discount > 0 ? product.discount + '%' : '-'}</td>
                     <td><span class="status-badge status-${product.status}">${product.status}</span></td>
                     <td>
@@ -180,10 +213,21 @@ $apiUrl = '../api/products.php';
             document.getElementById('productImageFile').value = '';
             document.getElementById('imagePreview').style.display = 'none';
             
+            // Clear CKEditor
+            if (descriptionEditor) {
+                descriptionEditor.setData('');
+            }
+            
             if (product) {
                 document.getElementById('productId').value = product.id;
                 document.getElementById('productTitle').value = product.title;
-                document.getElementById('productDescription').value = product.description || '';
+                // Set description in CKEditor
+                if (descriptionEditor) {
+                    descriptionEditor.setData(product.description || '');
+                } else {
+                    // Fallback if editor not ready
+                    document.getElementById('productDescription').value = product.description || '';
+                }
                 document.getElementById('productPrice').value = product.price;
                 document.getElementById('productDiscount').value = product.discount || 0;
                 document.getElementById('productCategory').value = product.category_id || '';
@@ -381,9 +425,26 @@ $apiUrl = '../api/products.php';
                         const previewImg = document.getElementById('previewImg');
                         const imagePreview = document.getElementById('imagePreview');
                         
+                        // Set up error handler with retry logic
                         previewImg.onerror = function() {
                             console.error('Failed to load uploaded image:', imageUrl);
-                            alert('Image uploaded but preview failed to load. The image URL has been saved: ' + imageUrl);
+                            
+                            // Try alternative path if current one fails
+                            // If URL doesn't contain /backend/, try adding it
+                            if (imageUrl && !imageUrl.includes('/backend/uploads/') && imageUrl.includes('/uploads/')) {
+                                const alternativeUrl = imageUrl.replace('/uploads/', '/backend/uploads/');
+                                console.log('Trying alternative URL:', alternativeUrl);
+                                previewImg.src = alternativeUrl;
+                                return;
+                            }
+                            
+                            // If still fails, just show the message but don't alert
+                            imagePreview.style.display = 'flex';
+                            previewImg.alt = 'Image preview unavailable';
+                            previewImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iI2Y5ZjlmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=';
+                            
+                            // Log the URL for debugging
+                            console.log('Image URL saved:', imageUrl);
                         };
                         
                         previewImg.onload = function() {
@@ -410,9 +471,17 @@ $apiUrl = '../api/products.php';
                     imageUrl = null; // Allow products without images
                 }
                 
+                // Get description from CKEditor if available, otherwise from textarea
+                let description = '';
+                if (descriptionEditor) {
+                    description = descriptionEditor.getData();
+                } else {
+                    description = document.getElementById('productDescription').value;
+                }
+                
                 const formData = {
                     title: document.getElementById('productTitle').value,
-                    description: document.getElementById('productDescription').value,
+                    description: description,
                     price: parseFloat(document.getElementById('productPrice').value),
                     discount: parseFloat(document.getElementById('productDiscount').value) || 0,
                     category_id: document.getElementById('productCategory').value || null,

@@ -87,9 +87,9 @@ if ($adminCount == 0) {
     echo "   ⚠ No admin user found. Creating default admin...\n";
     $hashedPassword = password_hash('admin123', PASSWORD_DEFAULT);
     $stmt = $pdo->prepare("INSERT INTO admins (username, password, email) VALUES (?, ?, ?)");
-    $stmt->execute(['admin', $hashedPassword, 'admin@hamrodigicart.com']);
+    $stmt->execute(['hamrodigicart1', $hashedPassword, 'admin@hamrodigicart.com']);
     echo "   ✓ Default admin created\n";
-    echo "   Username: admin\n";
+    echo "   Username: hamrodigicart1\n";
     echo "   Password: admin123\n";
 } else {
     echo "   ✓ Admin user exists\n";
@@ -147,8 +147,9 @@ echo "\n=== Setup Complete! ===\n\n";
 echo "Next steps:\n";
 echo "1. Start PHP server: php -S localhost:8000\n";
 echo "2. Access admin panel: http://localhost:8000/admin/login.php\n";
-echo "3. Login with: admin / admin123\n";
+echo "3. Login with: hamrodigicart1 / admin123\n";
 echo "4. Change your password in Settings!\n\n";
+
 
 
 

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import banner1 from '../assets/banner1.png';
-import banner2 from '../assets/banner2.png';
-import Logo from '../components/Logo';
-import { fetchAllProducts, fetchAllCategories, fetchProductsByCategory, subscribeToProductUpdates } from '../utils/productService';
+import { fetchAllProducts, fetchAllCategories, subscribeToProductUpdates } from '../utils/productService';
+import { fetchAllOffers, generateOfferSlug } from '../utils/offerService';
+import { fetchActiveHomepageBanners } from '../utils/homepageBannerService';
 import { useWebsiteSettings } from '../hooks/useWebsiteSettings';
 import './Home.css';
 
@@ -12,8 +11,13 @@ const Home = () => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [offers, setOffers] = useState([]);
+  const [homepageBanners, setHomepageBanners] = useState([]);
+  const bannerRowRef = useRef(null);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.matchMedia ? window.matchMedia('(max-width: 768px)').matches : window.innerWidth <= 768);
+  const [expandedCategories, setExpandedCategories] = useState(() => new Set());
   const location = useLocation();
   const navigate = useNavigate();
   const { settings } = useWebsiteSettings();
@@ -28,11 +32,21 @@ const Home = () => {
       // Fetch products from API
       const loadedProducts = await fetchAllProducts();
       setProducts(loadedProducts || []);
+
+      // Fetch offers from API
+      const loadedOffers = await fetchAllOffers();
+      setOffers(loadedOffers || []);
+
+      // Fetch active homepage banners (for slider)
+      const loadedBanners = await fetchActiveHomepageBanners();
+      setHomepageBanners(loadedBanners || []);
     } catch (error) {
       console.error('Error loading products and categories:', error);
       // Set empty arrays on error to prevent undefined issues
       setCategories([]);
       setProducts([]);
+      setOffers([]);
+      setHomepageBanners([]);
     }
   };
 
@@ -69,12 +83,120 @@ const Home = () => {
     }
   }, [settings, location.pathname]);
 
+  // Track mobile breakpoint for homepage category layout (mobile-only changes)
+  useEffect(() => {
+    const mq = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
+    const update = () => setIsMobile(mq ? mq.matches : window.innerWidth <= 768);
+
+    update();
+
+    if (!mq) {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+
+    if (mq.addEventListener) {
+      mq.addEventListener('change', update);
+      return () => mq.removeEventListener('change', update);
+    }
+
+    // Safari fallback
+    mq.addListener(update);
+    return () => mq.removeListener(update);
+  }, []);
+
+  // Reset banner active index when banners list changes
+  useEffect(() => {
+    setActiveBannerIndex(0);
+    // scroll back to start
+    if (bannerRowRef.current) {
+      bannerRowRef.current.scrollTo({ left: 0, behavior: 'auto' });
+    }
+  }, [homepageBanners.length]);
+
+  // Track active banner index based on scroll position (manual scrolling)
+  useEffect(() => {
+    const el = bannerRowRef.current;
+    if (!el) return;
+
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const cards = Array.from(el.querySelectorAll('.hero-banner-card'));
+        if (!cards.length) return;
+        const containerRect = el.getBoundingClientRect();
+        const containerCenter = containerRect.left + containerRect.width / 2;
+        let bestIdx = 0;
+        let bestDist = Number.POSITIVE_INFINITY;
+        cards.forEach((card, idx) => {
+          const rect = card.getBoundingClientRect();
+          const center = rect.left + rect.width / 2;
+          const dist = Math.abs(center - containerCenter);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = idx;
+          }
+        });
+        setActiveBannerIndex(bestIdx);
+      });
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    // initial calc
+    onScroll();
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      el.removeEventListener('scroll', onScroll);
+    };
+  }, [homepageBanners.length, isMobile]);
+
   useEffect(() => {
     // Filter products based on route
     let filtered = [...products];
     const path = location.pathname;
 
-    if (path === '/whatsapp' || path === '/whatsapp-templates') {
+    // First check if path matches an offer
+    const matchingOffer = offers.find(offer => {
+      const offerSlug = generateOfferSlug(offer.title);
+      return `/${offerSlug}` === path;
+    });
+
+    if (matchingOffer) {
+      // Filter products based on offer criteria
+      const offerTitle = matchingOffer.title.toLowerCase();
+      const offerLink = matchingOffer.link ? matchingOffer.link.trim() : '';
+
+      // If offer has a link (category name), filter by that
+      if (offerLink) {
+        filtered = products.filter(p => 
+          p.category === offerLink ||
+          p.category_name === offerLink ||
+          p.title.toLowerCase().includes(offerLink.toLowerCase())
+        );
+      } else {
+        // Try to match by offer title keywords
+        // Extract price if present (e.g., "Reels bundle ₹99")
+        const priceMatch = offerTitle.match(/₹?\s*(\d+)/);
+        if (priceMatch) {
+          const price = parseInt(priceMatch[1]);
+          filtered = products.filter(p => p.price === price);
+        } else {
+          // Match by keywords in offer title
+          const keywords = offerTitle.split(/\s+/).filter(k => k.length > 2);
+          filtered = products.filter(p => {
+            const productTitle = p.title.toLowerCase();
+            const productCategory = (p.category || p.category_name || '').toLowerCase();
+            
+            // Check if any keyword matches product title or category
+            return keywords.some(keyword => 
+              productTitle.includes(keyword) || 
+              productCategory.includes(keyword)
+            );
+          });
+        }
+      }
+    } else if (path === '/whatsapp' || path === '/whatsapp-templates') {
       filtered = products.filter(p =>
         p.category === 'WhatsApp Templates' ||
         p.title.toLowerCase().includes('whatsapp')
@@ -116,16 +238,16 @@ const Home = () => {
       // Check if path matches any category slug
       const category = categories.find(cat => `/${cat.slug}` === path);
       if (category) {
-        filtered = products.filter(p => p.category === category.name);
+        filtered = products.filter(p => p.category === category.name || p.category_name === category.name);
       }
     }
 
     setFilteredProducts(filtered);
-  }, [products, location.pathname, categories]);
+  }, [products, location.pathname, categories, offers]);
 
-  const handleDownload = (product) => {
-    navigate(`/product/${product.id}`);
-  };
+  // Product cards now handle:
+  // - card click -> /product/:id
+  // - download button -> /product/:id/download
 
   const handleViewAll = (categorySlug) => {
     navigate(`/${categorySlug}`);
@@ -141,23 +263,19 @@ const Home = () => {
     });
   };
 
-  // Get limited products for homepage display (first 6 products per category)
-  const getLimitedProductsByCategory = (categoryName, limit = 6) => {
+  // Get limited products for homepage display - always show 5 products
+  const getLimitedProductsByCategory = (categoryName) => {
     const allProducts = getProductsByCategory(categoryName);
-    return allProducts.slice(0, limit);
+    return allProducts.slice(0, isMobile ? 4 : 5);
   };
 
-  // Handle search
-  const handleSearch = (e) => {
-    e.preventDefault();
-    const trimmedQuery = searchQuery.trim();
-    if (trimmedQuery) {
-      navigate(`/search?q=${encodeURIComponent(trimmedQuery)}`);
-    } else {
-      // If search is empty, show all products
-      navigate('/search');
-    }
-    setSearchQuery('');
+  const toggleCategoryExpanded = (categoryId) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
   };
 
   // Handle popup close
@@ -190,70 +308,117 @@ const Home = () => {
         </div>
       )}
 
-      {/* Top Header - Same as Admin Dashboard */}
-      <header className="admin-top-header">
-        <div className="header-container">
-          <Link to="/" className="logo-link">
-            <Logo size="default" showText={true} variant="header" />
-          </Link>
-          <nav className="header-nav">
-            <Link to="/" className="header-nav-link">Home</Link>
-          </nav>
+      {homepageBanners && homepageBanners.length > 0 ? (
+        <section className="promotional-banners">
+          {(() => {
+            // Only show banners created from the Homepage Banner admin module (no fallback banners)
+            const bannersToShow = (homepageBanners || []).filter((b) => {
+              const hasAnyImage =
+                !!b?.image_path ||
+                !!b?.image_path_desktop ||
+                !!b?.image_path_mobile;
+              return hasAnyImage;
+            });
 
-          <div className="header-center">
-            <form onSubmit={handleSearch} className="search-box">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search Products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
-              <button type="submit" className="search-submit-button" aria-label="Search">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <path d="m21 21-4.35-4.35"></path>
-                </svg>
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+            if (bannersToShow.length === 0) return null;
 
-      <section className="promotional-banners">
-        <div className="banner-container">
-          <div className="banner">
-            <div className="banner-content">
-              <h2>{settings?.banner1_title || 'WE ARE Creators DIGITAL PRODUCT'}</h2>
-              <p>{settings?.banner1_subtitle || 'Sell Digital Products For Free create Store'}</p>
-            </div>
-            <div className="banner-image">
-              <img 
-                src={settings?.banner1_image || banner1} 
-                alt={settings?.banner1_title || 'Digital Growth Solutions'} 
-                className="banner-showcase-img" 
-              />
-            </div>
-          </div>
-          <div className="banner">
-            <div className="banner-content">
-              <h2>{settings?.banner2_title || 'WE ARE Creators DIGITAL PRODUCT'}</h2>
-              <p>{settings?.banner2_subtitle || 'Digital Products Selling Website'}</p>
-            </div>
-            <div className="banner-image">
-              <img 
-                src={settings?.banner2_image || banner2} 
-                alt={settings?.banner2_title || 'Digital Product Packs'} 
-                className="banner-showcase-img" 
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+            // Single-row horizontal scroller with manual controls (desktop + mobile)
+            const getBannerImage = (b) => {
+              const useDevice = String(b?.use_device_images || '0') === '1' || b?.use_device_images === 1;
+              if (useDevice) {
+                const candidate = isMobile ? (b.image_path_mobile || '') : (b.image_path_desktop || '');
+                if (candidate) return candidate;
+              }
+              return b.image_path;
+            };
+
+            const scrollToBanner = (idx) => {
+              const el = bannerRowRef.current;
+              if (!el) return;
+              const cards = el.querySelectorAll('.hero-banner-card');
+              const target = cards[idx];
+              if (target && target.scrollIntoView) {
+                target.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+              }
+            };
+
+            const total = bannersToShow.length;
+            const canPrev = total > 1 && activeBannerIndex > 0;
+            const canNext = total > 1 && activeBannerIndex < total - 1;
+
+            return (
+              <div className="hero-banners-row-wrap" aria-label="Homepage banners">
+                {total > 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      className="hero-banners-nav hero-banners-nav--left"
+                      onClick={() => scrollToBanner(Math.max(0, activeBannerIndex - 1))}
+                      disabled={!canPrev}
+                      aria-label="Previous banner"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="hero-banners-nav hero-banners-nav--right"
+                      onClick={() => scrollToBanner(Math.min(total - 1, activeBannerIndex + 1))}
+                      disabled={!canNext}
+                      aria-label="Next banner"
+                    >
+                      ›
+                    </button>
+                  </>
+                ) : null}
+
+                <div className="hero-banners-grid" ref={bannerRowRef}>
+                  {bannersToShow.map((b, idx) => {
+                    const hasContent = !!(b?.title || b?.subtitle || b?.button_text);
+                    const buttonHref = b?.button_link || b?.link_url || '';
+
+                    return (
+                      <div className="hero-banner-card" key={b.id ?? `hero-banner-${idx}`}>
+                        <img className="hero-banner-bg" src={getBannerImage(b)} alt="Homepage banner" />
+                        {hasContent ? <div className="hero-banner-overlay" /> : null}
+
+                        {hasContent ? (
+                          <div className="hero-banner-content">
+                            {b?.title ? <h2 className="hero-banner-title">{b.title}</h2> : null}
+                            {b?.subtitle ? <p className="hero-banner-subtitle">{b.subtitle}</p> : null}
+                            {b?.button_text && buttonHref ? (
+                              <a className="hero-banner-cta" href={buttonHref}>
+                                {b.button_text}
+                              </a>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        {b?.link_url ? (
+                          <a className="hero-banner-link-overlay" href={b.link_url} aria-label={b.title || 'Open banner link'} />
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {total > 1 ? (
+                  <div className="hero-banners-dots" aria-label="Banner navigation dots">
+                    {bannersToShow.map((_, i) => (
+                      <button
+                        key={`hero-dot-${i}`}
+                        type="button"
+                        className={`hero-banners-dot ${i === activeBannerIndex ? 'active' : ''}`}
+                        onClick={() => scrollToBanner(i)}
+                        aria-label={`Go to banner ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })()}
+        </section>
+      ) : null}
 
       {/* Display All Categories in Body Section */}
       {
@@ -262,35 +427,53 @@ const Home = () => {
             {categories.length > 0 ? (
               categories.map((category) => {
                 const categoryProducts = getProductsByCategory(category.name);
-                const limitedProducts = getLimitedProductsByCategory(category.name, 6);
+                const limit = isMobile ? 4 : 5;
+                const isExpanded = expandedCategories.has(category.id);
+                const visibleProducts = isExpanded ? categoryProducts : categoryProducts.slice(0, limit);
+                const canExpand = categoryProducts.length > limit;
 
                 return (
                   <section key={category.id} className="category-section">
                     <div className="category-section-container">
-                      <div className="category-header">
+                      <div className="category-header homepage-category-header">
                         <h2>{category.name}</h2>
+                        {canExpand && (
+                          <button
+                            type="button"
+                            className="see-more-products-btn see-more-products-btn--desktop"
+                            onClick={() => toggleCategoryExpanded(category.id)}
+                            aria-expanded={isExpanded}
+                          >
+                            {isExpanded ? 'See Less Products' : 'See More Products'}
+                          </button>
+                        )}
                       </div>
                       {categoryProducts.length > 0 ? (
                         <>
-                          <div className="products-grid">
-                            {limitedProducts.map((product) => (
+                          <div className={`homepage-products-scroll ${isExpanded ? 'is-expanded' : ''}`} aria-label={`${category.name} products`}>
+                            <div className={isExpanded ? 'homepage-products-expanded-grid' : 'homepage-products-row'}>
+                            {visibleProducts.map((product, idx) => (
                               <ProductCard
                                 key={product.id}
                                 product={product}
-                                onViewDetails={handleDownload}
+                                index={idx}
                               />
                             ))}
-                          </div>
-                          {categoryProducts.length > 6 && (
-                            <div className="view-all-button-container">
-                              <button
-                                className="view-all-button"
-                                onClick={() => handleViewAll(category.slug)}
-                              >
-                                {settings?.product_card_see_all_text || 'See All Products'}
-                              </button>
                             </div>
-                          )}
+                          </div>
+                          {/* Mobile-only placement for See More Products under the grid */}
+                          <div className="see-more-products-mobile-wrap">
+                            {canExpand && (
+                              <button
+                                type="button"
+                                className="see-more-products-btn see-more-products-btn--mobile"
+                                onClick={() => toggleCategoryExpanded(category.id)}
+                                aria-expanded={isExpanded}
+                              >
+                                {isExpanded ? 'See Less Products' : 'See More Products'}
+                              </button>
+                            )}
+                          </div>
                         </>
                       ) : (
                         <div className="no-products-in-category">
@@ -318,6 +501,17 @@ const Home = () => {
       {
         location.pathname !== '/' && (() => {
           const getCategoryTitle = () => {
+            // First check if path matches an offer
+            const matchingOffer = offers.find(offer => {
+              const offerSlug = generateOfferSlug(offer.title);
+              return `/${offerSlug}` === location.pathname;
+            });
+            
+            if (matchingOffer) {
+              return matchingOffer.title;
+            }
+            
+            // Legacy routes
             if (location.pathname === '/whatsapp' || location.pathname === '/whatsapp-templates') return 'WhatsApp Templates';
             if (location.pathname === '/reels-bundle') return 'Reels Bundle';
             if (location.pathname === '/combo-reels-bundle') return 'Combo Reels Bundle';
@@ -331,6 +525,8 @@ const Home = () => {
             if (location.pathname === '/digital-planner-2025') return 'Digital Planner 2025';
             if (location.pathname === '/social-media-pack') return 'Social Media Pack';
             if (location.pathname === '/video-templates') return 'Video Templates';
+            
+            // Check if path matches any category slug
             const category = categories.find(cat => `/${cat.slug}` === location.pathname);
             return category ? category.name : 'Products';
           };
@@ -349,7 +545,6 @@ const Home = () => {
                     <ProductCard
                       key={product.id}
                       product={product}
-                      onViewDetails={handleDownload}
                     />
                   ))
                 ) : (

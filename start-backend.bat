@@ -1,7 +1,9 @@
 @echo off
 echo Starting PHP Backend Server...
 echo.
-echo Backend will be available at: http://localhost:8000
+echo Backend will be available at:
+echo   Local:  http://localhost:8000
+echo   Network: http://YOUR_IP:8000 (accessible from other devices)
 echo Admin Panel: http://localhost:8000/admin/login.php
 echo.
 echo Press Ctrl+C to stop the server
@@ -23,6 +25,6 @@ if not exist "router.php" (
     exit /b 1
 )
 
-REM Start PHP server with router
-php -S localhost:8000 -c php.ini -t . router.php
+REM Start PHP server with router (accessible from network)
+php -S 0.0.0.0:8000 -c php.ini -t . router.php
 

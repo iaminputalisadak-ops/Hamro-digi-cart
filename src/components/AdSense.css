@@ -1,0 +1,87 @@
+/* AdSense Container Styles */
+
+.adsense-container {
+  margin: 1rem 0;
+  text-align: center;
+  overflow: hidden;
+}
+
+.adsense-placeholder {
+  margin: 1rem 0;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Homepage Ad Styles */
+.adsense-container.homepage-ad-banner {
+  margin: 2rem 0;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  min-height: 100px;
+}
+
+/* Sidebar Ad Styles */
+.adsense-container.sidebar-ad {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  min-height: 250px;
+}
+
+/* Inline Ad Styles */
+.adsense-container.inline-ad {
+  margin: 2rem auto;
+  padding: 1rem;
+  max-width: 728px;
+}
+
+/* Product Page Ad Styles */
+.adsense-container.product-ad {
+  margin: 2rem 0;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .adsense-container.homepage-ad-banner,
+  .adsense-container.inline-ad {
+    margin: 1rem 0;
+    padding: 0.5rem;
+  }
+  
+  .adsense-container.sidebar-ad,
+  .adsense-container.product-ad {
+    margin: 1rem 0;
+    padding: 0.75rem;
+  }
+}
+
+/* Ensure ads don't overflow on mobile */
+@media (max-width: 480px) {
+  .adsense-container {
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .adsense-container ins {
+    max-width: 100% !important;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+

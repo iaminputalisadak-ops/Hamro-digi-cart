@@ -1,21 +1,45 @@
 // Website Settings Service - Fetches website settings from PHP API
 
-import API_BASE_URL, { apiRequest } from '../config/api';
+import { apiRequest } from '../config/api';
+
+// Simple cache for website settings (in-memory cache)
+let settingsCache = null;
+let settingsCacheTime = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
 /**
- * Fetch all website settings from the API
+ * Fetch all website settings from the API with caching
  * @returns {Promise<Object>} Object containing all website settings
  */
-export const fetchWebsiteSettings = async () => {
+export const fetchWebsiteSettings = async (forceRefresh = false) => {
   try {
+    // Return cached settings if still valid
+    if (!forceRefresh && settingsCache && settingsCacheTime) {
+      const now = Date.now();
+      if (now - settingsCacheTime < CACHE_DURATION) {
+        return settingsCache;
+      }
+    }
+    
     const data = await apiRequest('website-settings.php');
     if (data.success) {
+      settingsCache = data.data;
+      settingsCacheTime = Date.now();
       return data.data;
     }
-    return getDefaultSettings();
+    const defaultSettings = getDefaultSettings();
+    settingsCache = defaultSettings;
+    settingsCacheTime = Date.now();
+    return defaultSettings;
   } catch (error) {
     console.error('Error fetching website settings:', error);
-    return getDefaultSettings();
+    const defaultSettings = getDefaultSettings();
+    // Cache default settings for shorter duration on error
+    if (!settingsCache) {
+      settingsCache = defaultSettings;
+      settingsCacheTime = Date.now();
+    }
+    return defaultSettings;
   }
 };
 
@@ -29,13 +53,23 @@ const getDefaultSettings = () => {
     logo_text_line1: 'Hamro Digi',
     logo_text_line2: 'CART',
     website_title: 'Hamro Digi Cart',
-    website_tagline: 'Best Digital Product In India',
+    website_tagline: 'Best Digital Product In Nepal',
     website_description: '',
     facebook_url: '',
+    facebook_name: 'Facebook',
+    facebook_icon_url: '',
     instagram_url: '',
+    instagram_name: 'Instagram',
+    instagram_icon_url: '',
     youtube_url: '',
+    youtube_name: 'YouTube',
+    youtube_icon_url: '',
     twitter_url: '',
+    twitter_name: 'Twitter/X',
+    twitter_icon_url: '',
     whatsapp_url: '',
+    whatsapp_name: 'WhatsApp',
+    whatsapp_icon_url: '',
     footer_copyright: `Copyright (c) ${new Date().getFullYear()}`,
     contact_email: '',
     contact_phone: '',
@@ -46,6 +80,11 @@ const getDefaultSettings = () => {
     banner2_title: 'WE ARE Creators DIGITAL PRODUCT',
     banner2_subtitle: 'Digital Products Selling Website',
     banner2_image: '',
+    // Homepage banner slider settings
+    homepage_banner_autoplay: '0',
+    homepage_banner_duration: '5',
+    homepage_banner_height: '260',
+    homepage_banner_animation: 'slide',
     popup_enabled: '0',
     popup_title: '',
     popup_content: '',

@@ -41,6 +41,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Include database config
 require_once __DIR__ . '/database.php';
 
+// Optional local secret (gitignored). Production should use env var HAMRODIGICART_APP_KEY.
+@include_once __DIR__ . '/secret.php';
+
+/**
+ * Get application key for encrypting sensitive settings (e.g., SMTP password).
+ */
+function getAppKey() {
+    $envKey = getenv('HAMRODIGICART_APP_KEY');
+    if ($envKey && is_string($envKey) && trim($envKey) !== '') {
+        return trim($envKey);
+    }
+    if (defined('HAMRODIGICART_APP_KEY') && is_string(HAMRODIGICART_APP_KEY) && trim(HAMRODIGICART_APP_KEY) !== '') {
+        return trim(HAMRODIGICART_APP_KEY);
+    }
+    return null;
+}
+
+/**
+ * Encrypt a sensitive value for storage in DB.
+ * Format: enc:v1:<base64(iv|tag|ciphertext)>
+ */
+function encryptSensitiveValue($plaintext) {
+    if (!is_string($plaintext) || $plaintext === '') return '';
+    if (!extension_loaded('openssl')) {
+        throw new Exception('OpenSSL extension is required to encrypt secrets');
+    }
+    $appKey = getAppKey();
+    if (!$appKey || $appKey === 'CHANGE_ME_TO_A_LONG_RANDOM_SECRET') {
+        throw new Exception('App key not configured. Set HAMRODIGICART_APP_KEY or update backend/config/secret.php');
+    }
+    $key = hash('sha256', $appKey, true); // 32 bytes
+    $iv = random_bytes(12); // GCM recommended 12 bytes
+    $tag = '';
+    $cipher = openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+    if ($cipher === false) {
+        throw new Exception('Failed to encrypt secret');
+    }
+    return 'enc:v1:' . base64_encode($iv . $tag . $cipher);
+}
+
+/**
+ * Decrypt a sensitive value from DB.
+ */
+function decryptSensitiveValue($value) {
+    if (!is_string($value) || $value === '') return '';
+    if (strpos($value, 'enc:v1:') !== 0) {
+        // Backward compatibility: stored in plaintext
+        return $value;
+    }
+    if (!extension_loaded('openssl')) {
+        throw new Exception('OpenSSL extension is required to decrypt secrets');
+    }
+    $appKey = getAppKey();
+    if (!$appKey || $appKey === 'CHANGE_ME_TO_A_LONG_RANDOM_SECRET') {
+        throw new Exception('App key not configured. Set HAMRODIGICART_APP_KEY or update backend/config/secret.php');
+    }
+    $key = hash('sha256', $appKey, true);
+    $raw = base64_decode(substr($value, strlen('enc:v1:')), true);
+    if ($raw === false || strlen($raw) < 12 + 16 + 1) {
+        throw new Exception('Invalid encrypted secret format');
+    }
+    $iv = substr($raw, 0, 12);
+    $tag = substr($raw, 12, 16);
+    $cipher = substr($raw, 28);
+    $plain = openssl_decrypt($cipher, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+    if ($plain === false) {
+        throw new Exception('Failed to decrypt secret');
+    }
+    return $plain;
+}
+
 /**
  * Check if admin is logged in
  */
@@ -80,9 +151,43 @@ function validateEmail($email) {
 }
 
 /**
+ * Get favicon URL from settings
+ */
+function getFaviconUrl() {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'website_favicon'");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($result && !empty($result['setting_value'])) {
+            return htmlspecialchars(trim($result['setting_value']));
+        }
+    } catch (Exception $e) {
+        // If database query fails, return empty
+    }
+    return '';
+}
+
+/**
+ * Get website logo URL from settings
+ */
+function getWebsiteLogoUrl() {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'website_logo'");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($result && !empty($result['setting_value'])) {
+            return htmlspecialchars(trim($result['setting_value']));
+        }
+    } catch (Exception $e) {
+        // If database query fails, return empty
+    }
+    return '';
+}
+
+/**
  * Upload file
  */
-function uploadFile($file, $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], $maxSize = 5242880) {
+function uploadFile($file, $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon'], $maxSize = 5242880) {
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
         return ['success' => false, 'error' => 'No file uploaded'];
     }
@@ -123,13 +228,14 @@ function uploadFile($file, $allowedTypes = ['image/jpeg', 'image/png', 'image/gi
             'jpeg' => 'image/jpeg',
             'png' => 'image/png',
             'gif' => 'image/gif',
-            'webp' => 'image/webp'
+            'webp' => 'image/webp',
+            'ico' => 'image/x-icon'
         ];
         $mimeType = isset($extensionMap[$extension]) ? $extensionMap[$extension] : '';
     }
 
     if (empty($mimeType) || !in_array($mimeType, $allowedTypes)) {
-        return ['success' => false, 'error' => 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP'];
+        return ['success' => false, 'error' => 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP, ICO'];
     }
 
     $uploadDir = __DIR__ . '/../uploads/';

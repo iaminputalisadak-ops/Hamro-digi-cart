@@ -10,6 +10,7 @@ $apiUrl = '../api/pages.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pages - Admin Panel</title>
+    <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/admin.css">
     <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 </head>
@@ -96,9 +97,9 @@ $apiUrl = '../api/pages.php';
                 return;
             }
             
-            tbody.innerHTML = pages.map(page => `
+            tbody.innerHTML = pages.map((page, index) => `
                 <tr>
-                    <td>#${page.id}</td>
+                    <td>#${index + 1}</td>
                     <td>${page.title}</td>
                     <td>${page.route}</td>
                     <td>${new Date(page.updated_at).toLocaleDateString()}</td>

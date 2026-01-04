@@ -10,12 +10,19 @@ const Logo = ({ size = 'default', showText = true, variant = 'header' }) => {
   const logoUrl = settings?.website_logo || logoImage;
   const logoTextLine1 = settings?.logo_text_line1 || 'Hamro Digi';
   const logoTextLine2 = settings?.logo_text_line2 || 'CART';
+  const normalizedLine1 = String(logoTextLine1).trim().toLowerCase();
+  const normalizedLine2 = String(logoTextLine2).trim().toLowerCase();
+  const hideLine2 =
+    !normalizedLine2 ||
+    normalizedLine1 === normalizedLine2 ||
+    normalizedLine1.endsWith(` ${normalizedLine2}`) ||
+    normalizedLine1.endsWith(normalizedLine2);
 
   return (
     <div className={`logo-container logo-${size} logo-${variant}`}>
       <img
         src={logoUrl}
-        alt={`${logoTextLine1} ${logoTextLine2} Logo`}
+        alt={`${logoTextLine1}${hideLine2 ? '' : ` ${logoTextLine2}`} Logo`}
         className="logo-image"
         style={{ width: logoSize, height: logoSize, objectFit: 'contain' }}
         onError={(e) => {
@@ -29,7 +36,7 @@ const Logo = ({ size = 'default', showText = true, variant = 'header' }) => {
       {showText && (
         <div className={`logo-text-container logo-text-${variant}`}>
           <div className="logo-text-line1">{logoTextLine1}</div>
-          <div className="logo-text-line2">{logoTextLine2}</div>
+          {!hideLine2 && <div className="logo-text-line2">{logoTextLine2}</div>}
         </div>
       )}
     </div>

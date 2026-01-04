@@ -1,48 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import Logo from '../components/Logo';
-import { fetchAllProducts, searchProducts, subscribeToProductUpdates } from '../utils/productService';
+import SEO from '../components/SEO';
+import { searchProducts, subscribeToProductUpdates } from '../utils/productService';
 import './Home.css';
 
 const Search = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
-  const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState(query);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch all products from API
-    const loadProducts = async () => {
-      try {
-        const allProducts = await fetchAllProducts();
-        setProducts(allProducts);
-      } catch (error) {
-        console.error('Error loading products:', error);
-      }
-    };
-
-    // Initial load
-    loadProducts();
-    
-    // Subscribe to product updates from admin panel
+    // Subscribe to product updates from admin panel to refresh search results
     const unsubscribe = subscribeToProductUpdates(async () => {
       try {
-        const allProducts = await fetchAllProducts();
-        setProducts(allProducts);
+        // Refresh search results when products are updated
+        const results = await searchProducts(query);
+        setFilteredProducts(results);
       } catch (error) {
         console.error('Error updating products:', error);
       }
     });
     
     return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    // Update search query when URL changes
-    setSearchQuery(query);
   }, [query]);
 
   useEffect(() => {
@@ -60,55 +41,13 @@ const Search = () => {
     performSearch();
   }, [query]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    const trimmedQuery = searchQuery.trim();
-    if (trimmedQuery) {
-      navigate(`/search?q=${encodeURIComponent(trimmedQuery)}`);
-    } else {
-      navigate('/search');
-    }
-  };
-
-  const handleDownload = (product) => {
-    navigate(`/product/${product.id}`);
-  };
-
   return (
     <div className="home-page">
-      {/* Top Header - Same as Home Page */}
-      <header className="admin-top-header">
-        <div className="header-container">
-          <Link to="/" className="logo-link">
-            <Logo size="default" showText={true} variant="header" />
-          </Link>
-          <nav className="header-nav">
-            <Link to="/" className="header-nav-link">Home</Link>
-          </nav>
-
-          <div className="header-center">
-            <form onSubmit={handleSearch} className="search-box">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search Products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
-              <button type="submit" className="search-submit-button" aria-label="Search">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <path d="m21 21-4.35-4.35"></path>
-                </svg>
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <SEO 
+        title={`Search${query ? `: ${query}` : ''}`}
+        description={`Search for digital products${query ? ` matching "${query}"` : ''}. Find reels bundles, templates, and more.`}
+        keywords={`search, ${query || ''}, digital products, templates, Nepal`}
+      />
 
       <section className="products-section">
         <div className="products-header">
@@ -127,7 +66,6 @@ const Search = () => {
               <ProductCard
                 key={product.id}
                 product={product}
-                onViewDetails={handleDownload}
               />
             ))
           ) : (

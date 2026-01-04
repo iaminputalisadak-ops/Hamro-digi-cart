@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import ProductCard from '../components/ProductCard';
-import Logo from '../components/Logo';
+import SEO from '../components/SEO';
 import { fetchAllProducts, fetchProductById, subscribeToProductUpdates } from '../utils/productService';
+import { useWebsiteSettings } from '../hooks/useWebsiteSettings';
+import { stripHTMLSimple } from '../utils/htmlUtils';
 import './ProductDetails.css';
 
 const ProductDetails = () => {
@@ -11,15 +12,22 @@ const ProductDetails = () => {
   const [product, setProduct] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useWebsiteSettings();
 
   useEffect(() => {
-    // Fetch product from API
+    // Scroll to top on mount and when product ID changes
+    window.scrollTo(0, 0);
+
+    // Fetch product from API - optimized with parallel fetching
     const loadProduct = async () => {
       try {
-        const allProducts = await fetchAllProducts();
-        setProducts(allProducts);
-
-        const foundProduct = await fetchProductById(id);
+        // Fetch product by ID and all products in parallel
+        const [foundProduct, allProducts] = await Promise.all([
+          fetchProductById(id),
+          fetchAllProducts()
+        ]);
+        
+        setProducts(allProducts || []);
         if (foundProduct) {
           setProduct(foundProduct);
         }
@@ -50,7 +58,21 @@ const ProductDetails = () => {
   }, [id]);
 
   const handleDownload = () => {
-    navigate(`/product/${id}/download`);
+    // Calculate prices to pass to download page
+    const productPrice = parseFloat(product.price) || 0;
+    const productDiscount = parseFloat(product.discount) || 0;
+    const discountedPrice = productDiscount > 0
+      ? Math.round(productPrice * (1 - productDiscount / 100))
+      : productPrice;
+
+    // Pass price data to ensure consistency
+    navigate(`/product/${id}/download`, {
+      state: {
+        productPrice,
+        productDiscount,
+        discountedPrice
+      }
+    });
   };
 
   if (loading) {
@@ -80,36 +102,82 @@ const ProductDetails = () => {
     .filter(p => p.id !== product.id)
     .slice(0, 5);
 
-  // Generate tags from product title and category
-  const tags = [
-    'Skilcart',
-    product.category || 'Reels Bundle',
-    'Reels Kit',
-    'Instagram Reels Bundle',
-    'Viral Reels Bundle',
-    'Animation reels bundle',
-    'AI reels bundle',
-    'Free download'
-  ].filter(Boolean);
+  // Parse features from settings
+  const parseFeatures = () => {
+    const featuresText = settings?.product_details_features || "✓ No Logo\n✓ Lifetime Access\n📁 Google Drive Link\n📥 Easy To Download\n✓ No Watermark\n⚡ Instant Download";
+    return featuresText.split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        const trimmed = line.trim();
+        // Extract icon (first character/emoji) and text
+        const match = trimmed.match(/^(.{1,2})\s*(.+)$/);
+        if (match) {
+          return { icon: match[1], text: match[2] };
+        }
+        return { icon: '✓', text: trimmed };
+      });
+  };
+
+  const features = parseFeatures();
+
+  // Generate tags from settings and product data
+  const getTags = () => {
+    const defaultTags = settings?.product_details_default_tags || 'Skilcart,Reels Kit,Instagram Reels Bundle,Viral Reels Bundle,Animation reels bundle,AI reels bundle,Free download';
+    const tagsArray = defaultTags.split(',').map(t => t.trim()).filter(Boolean);
+    // Add product category if not already in tags
+    if (product.category && !tagsArray.includes(product.category)) {
+      tagsArray.unshift(product.category);
+    }
+    return tagsArray;
+  };
+
+  const tags = getTags();
+
+  // Get description title
+  const getDescriptionTitle = () => {
+    const titleFormat = settings?.product_details_description_title || '{title} - Fun, Viral & Engaging!';
+    const cleanTitle = stripHTMLSimple(product.title);
+    return titleFormat.replace('{title}', cleanTitle);
+  };
+
+  // Generate structured data for product
+  const productStructuredData = product ? {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": stripHTMLSimple(product.title),
+    "description": stripHTMLSimple(product.description || ''),
+    "image": product.image || (product.images && product.images[0]) || '',
+    "offers": {
+      "@type": "Offer",
+      "url": `${process.env.REACT_APP_SITE_URL || (process.env.NODE_ENV === 'production' ? 'https://hamrodigicart.com' : 'http://localhost:3000')}/product/${product.id}`,
+      "priceCurrency": "NPR",
+      "price": discountedPrice.toString(),
+      "availability": "https://schema.org/InStock",
+      "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
+    },
+    "brand": {
+      "@type": "Brand",
+      "name": "Hamro Digi Cart"
+    },
+    "category": product.category || "Digital Products"
+  } : null;
 
   return (
     <div className="product-details-page">
-      {/* Top Navbar */}
-      <div className="details-navbar">
-        <div className="details-navbar-container">
-          <Link to="/" className="details-navbar-logo">
-            <Logo size="default" showText={true} variant="header" />
-          </Link>
-          <nav className="details-navbar-nav">
-            <Link to="/" className="details-navbar-link">Home</Link>
-          </nav>
-        </div>
-      </div>
-
+      {product && (
+        <SEO 
+          title={stripHTMLSimple(product.title)}
+          description={stripHTMLSimple(product.description || product.title + ' - Premium digital product available for instant download')}
+          keywords={`${product.category || ''}, digital product, ${stripHTMLSimple(product.title)}, download, Nepal`}
+          image={product.image || (product.images && product.images[0]) || ''}
+          type="product"
+          structuredData={productStructuredData}
+        />
+      )}
       <div className="product-details-container">
         {/* Breadcrumbs */}
         <div className="breadcrumbs">
-          <span>{product.title}</span>
+          <span>{stripHTMLSimple(product.title)}</span>
         </div>
 
         {/* Main Content */}
@@ -117,7 +185,7 @@ const ProductDetails = () => {
           {/* Left Column - Main Content */}
           <div className="product-main-content">
             {/* Product Title */}
-            <h1 className="product-main-title">{product.title}</h1>
+            <h1 className="product-main-title">{stripHTMLSimple(product.title)}</h1>
 
             {/* Category Badge */}
             <div className="product-category-badge">
@@ -127,7 +195,7 @@ const ProductDetails = () => {
             {/* Product Image - Full Image Display */}
             <div className="product-image-display">
               <div className="product-title-overlay">
-                <h2>{product.title}</h2>
+                <h2>{stripHTMLSimple(product.title)}</h2>
               </div>
               <div className="product-image-container-full">
                 {(() => {
@@ -136,7 +204,7 @@ const ProductDetails = () => {
                   return productImage ? (
                     <img
                       src={productImage}
-                      alt={product.title}
+                      alt={stripHTMLSimple(product.title)}
                       style={{ width: '100%', height: 'auto', maxHeight: '600px', objectFit: 'contain' }}
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -156,30 +224,12 @@ const ProductDetails = () => {
 
             {/* Features */}
             <div className="product-features-grid">
-              <div className="feature-box">
-                <span className="feature-icon">✓</span>
-                <span>No Logo</span>
-              </div>
-              <div className="feature-box">
-                <span className="feature-icon">✓</span>
-                <span>Lifetime Access</span>
-              </div>
-              <div className="feature-box">
-                <span className="feature-icon">📁</span>
-                <span>Google Drive Link</span>
-              </div>
-              <div className="feature-box">
-                <span className="feature-icon">📥</span>
-                <span>Easy To Download</span>
-              </div>
-              <div className="feature-box">
-                <span className="feature-icon">✓</span>
-                <span>No Watermark</span>
-              </div>
-              <div className="feature-box">
-                <span className="feature-icon">⚡</span>
-                <span>Instant Download</span>
-              </div>
+              {features.map((feature, index) => (
+                <div key={index} className="feature-box">
+                  <span className="feature-icon">{feature.icon}</span>
+                  <span>{feature.text}</span>
+                </div>
+              ))}
             </div>
 
             {/* Pricing and Download Button */}
@@ -188,27 +238,27 @@ const ProductDetails = () => {
                 {product.discount && product.discount > 0 ? (
                   <div className="price-with-discount-details">
                     <div className="price-row">
-                      <span className="price-amount-original">₹{product.price}</span>
-                      <span className="price-amount">₹{discountedPrice}</span>
+                      <span className="price-amount-original">रु{product.price}</span>
+                      <span className="price-amount">रु{discountedPrice}</span>
                     </div>
                     <span className="discount-badge-large">{product.discount}% OFF</span>
                   </div>
                 ) : (
-                  <span className="price-amount">₹{product.price}</span>
+                  <span className="price-amount">रु{product.price}</span>
                 )}
               </div>
               <button onClick={handleDownload} className="btn-download">
                 <span className="download-icon">🛒</span>
-                <span>Download</span>
+                <span>{settings?.product_details_button_text || 'Download'}</span>
                 <span className="download-badge">✨</span>
               </button>
             </div>
 
             {/* Product Description */}
             <div className="product-description-section">
-              <h3>{product.title} - Fun, Viral & Engaging!</h3>
+              <h3>{getDescriptionTitle()}</h3>
               <p>
-                {product.description || `Get access to ${product.title}. Perfect for social media creators looking to create engaging, viral content. This bundle includes high-quality animations and templates that are ready to use. No watermarks, no logos - just pure creative content to help you grow your online presence.`}
+                {stripHTMLSimple(product.description || `Get access to ${stripHTMLSimple(product.title)}. Perfect for social media creators looking to create engaging, viral content. This bundle includes high-quality animations and templates that are ready to use. No watermarks, no logos - just pure creative content to help you grow your online presence.`)}
               </p>
             </div>
           </div>
@@ -221,18 +271,18 @@ const ProductDetails = () => {
                 {product.discount && product.discount > 0 ? (
                   <div className="price-with-discount-details">
                     <div className="price-row">
-                      <span className="price-amount-original">₹{product.price}</span>
-                      <span className="price-amount">₹{discountedPrice}</span>
+                      <span className="price-amount-original">रु{product.price}</span>
+                      <span className="price-amount">रु{discountedPrice}</span>
                     </div>
                     <span className="discount-badge-large">{product.discount}% OFF</span>
                   </div>
                 ) : (
-                  <span className="price-amount">₹{product.price}</span>
+                  <span className="price-amount">रु{product.price}</span>
                 )}
               </div>
               <button onClick={handleDownload} className="btn-download-sidebar">
                 <span className="download-icon">🛒</span>
-                <span>Download</span>
+                <span>{settings?.product_details_button_text || 'Download'}</span>
                 <span className="download-badge">✨</span>
               </button>
             </div>
@@ -240,7 +290,7 @@ const ProductDetails = () => {
             {/* Related Bundles */}
             {relatedProducts.length > 0 && (
               <div className="related-bundles">
-                <h3>Get Epic Viral Instagram Reels Bundle For Better Video Content</h3>
+                <h3>{settings?.product_details_related_title || 'Get Epic Viral Instagram Reels Bundle For Better Video Content'}</h3>
                 <div className="related-products-list">
                   {relatedProducts.map((relatedProduct) => (
                     <Link
@@ -258,8 +308,8 @@ const ProductDetails = () => {
             {/* Advertisement */}
             <div className="advertisement-box">
               <div className="ad-content">
-                <h4>Amazon Month of the SALE</h4>
-                <p>Special offers and discounts</p>
+                <h4>{settings?.product_details_ad_title || 'Amazon Month of the SALE'}</h4>
+                <p>{settings?.product_details_ad_description || 'Special offers and discounts'}</p>
               </div>
             </div>
 
