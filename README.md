@@ -686,6 +686,10 @@ php reset-admin-password.php
 - Use production build for React app
 - Enable PHP OPcache
 
+## 👥 Contributors
+
+- [@iaminputalisadak-ops](https://github.com/iaminputalisadak-ops) - Development, deployment, UI/admin updates
+
 ## 📄 License
 
 This project is private and proprietary.

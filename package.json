@@ -2,6 +2,11 @@
   "name": "hamrodigicart",
   "version": "0.1.0",
   "private": true,
+  "author": "iaminputalisadak-ops",
+  "repository": {
+    "url": "https://github.com/iaminputalisadak-ops/Hamro-digi-cart"
+  },
+  "contributors": ["iaminputalisadak-ops"],
   "dependencies": {
     "@ckeditor/ckeditor5-build-classic": "^41.4.2",
     "@ckeditor/ckeditor5-react": "^11.0.1",
