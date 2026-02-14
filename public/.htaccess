@@ -3,6 +3,11 @@
   RewriteEngine On
   RewriteBase /
 
+  # Compatibility: some DB records may still reference "/uploads/*".
+  # Map those requests to the actual backend uploads folder on cPanel.
+  RewriteCond %{REQUEST_URI} ^/uploads/ [NC]
+  RewriteRule ^uploads/(.*)$ backend/uploads/$1 [L,NC]
+
   # Don't rewrite files or directories
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

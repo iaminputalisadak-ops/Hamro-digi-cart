@@ -137,7 +137,9 @@ function sendPurchaseConfirmationEmail($order) {
         $result = sendSMTPEmail(
             $customerEmail,
             $emailSubject,
-            $emailMessage
+            $emailMessage,
+            $smtpSettings['smtp_email'] ?? null,
+            $smtpSettings['smtp_from_name'] ?? null
         );
         
         if (!$result['success']) {
@@ -162,56 +164,62 @@ function sendPurchaseConfirmationEmail($order) {
  */
 function sendNewOrderNotificationToAdmin($order) {
     try {
-        // Get admin email from settings - prefer admin_order_notification_email, then contact_email, then admins.email, then smtp_email
+        // Get admin email from settings - prefer admin_order_notification_email, then smtp_email, then admins.email, then contact_email.
+        // If any candidate is invalid, skip it and try the next one.
         $pdo = getDBConnection();
 
+        $candidates = [];
+
         // 1) Dedicated admin notification email
-        $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'admin_order_notification_email'");
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        $adminEmail = $result ? trim($result['setting_value']) : '';
-        
-        // 2) Fallback to contact_email
-        if (empty($adminEmail)) {
+        try {
+            $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'admin_order_notification_email'");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result && !empty($result['setting_value'])) $candidates[] = trim($result['setting_value']);
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        // 2) SMTP email (From Email) - send admin notifications "to me" by default if dedicated admin email isn't set
+        try {
+            $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'smtp_email'");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result && !empty($result['setting_value'])) $candidates[] = trim($result['setting_value']);
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        // 3) Admin users table email
+        try {
+            $stmt = $pdo->query("SELECT email FROM admins WHERE email IS NOT NULL AND email <> '' ORDER BY id ASC LIMIT 1");
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row && !empty($row['email'])) $candidates[] = trim($row['email']);
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        // 4) Contact email (last fallback)
+        try {
             $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'contact_email'");
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $adminEmail = $result ? trim($result['setting_value']) : '';
+            if ($result && !empty($result['setting_value'])) $candidates[] = trim($result['setting_value']);
+        } catch (Throwable $e) {
+            // ignore
         }
-        
-        // If contact_email is not set, try admin users table email
-        if (empty($adminEmail)) {
-            try {
-                $stmt = $pdo->query("SELECT email FROM admins WHERE email IS NOT NULL AND email <> '' ORDER BY id ASC LIMIT 1");
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                $adminEmail = $row ? trim($row['email']) : '';
-            } catch (Throwable $e) {
-                // ignore
+
+        $adminEmail = '';
+        foreach ($candidates as $cand) {
+            if (is_string($cand) && $cand !== '' && filter_var($cand, FILTER_VALIDATE_EMAIL)) {
+                $adminEmail = $cand;
+                break;
             }
         }
 
-        // If contact_email is not set, try SMTP email as fallback
         if (empty($adminEmail)) {
-            $stmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'smtp_email'");
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $adminEmail = $result ? trim($result['setting_value']) : '';
-            
-            if (!empty($adminEmail)) {
-                error_log("Using SMTP email as admin notification email: " . $adminEmail);
-            }
-        }
-        
-        if (empty($adminEmail)) {
-            $errorMsg = "Admin email not configured. Please set admin_order_notification_email (recommended) or contact_email in Website Settings, or configure SMTP email in Settings.";
+            $errorMsg = "Admin email not configured. Please set admin_order_notification_email in Website Settings, or configure SMTP Email (From Email) in Settings.";
             error_log($errorMsg);
             return ['success' => false, 'error' => $errorMsg];
         }
-        
-        // Validate email format
-        if (!filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
-            $errorMsg = "Invalid admin email format: " . $adminEmail;
-            error_log($errorMsg);
-            return ['success' => false, 'error' => $errorMsg];
-        }
-        
+
         error_log("Sending admin notification email to: " . $adminEmail . " for order #" . ($order['id'] ?? 'unknown'));
         
         $orderId = $order['id'];
@@ -230,12 +238,11 @@ function sendNewOrderNotificationToAdmin($order) {
         $host = $_SERVER['HTTP_HOST'];
         $baseUrl = $protocol . '://' . $host;
 
-        // Direct links to admin panel with quick actions (admin will still confirm on page)
-        $approveLink = $baseUrl . '/admin/orders.php?order_id=' . urlencode($orderId) . '&quick_action=approved';
-        $rejectLink  = $baseUrl . '/admin/orders.php?order_id=' . urlencode($orderId) . '&quick_action=rejected';
+        // Link to view the order in admin panel
+        $viewOrderLink = $baseUrl . '/admin/orders.php?order_id=' . urlencode($orderId);
         
         // Build email message
-        $emailSubject = "🛒 New Order Received - Order #{$orderId}";
+        $emailSubject = "New Order Received - Order #{$orderId}";
         
         $screenshotHtml = '';
         if (!empty($paymentScreenshot)) {
@@ -291,16 +298,12 @@ function sendNewOrderNotificationToAdmin($order) {
                     <span class="info-value">' . $orderDate . '</span>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">Products:</span>
+                    <span class="info-label">Product:</span>
                     <span class="info-value"><strong>' . $productTitle . '</strong></span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Total Amount:</span>
-                    <span class="info-value" style="color: #22c55e; font-weight: 700; font-size: 18px;">रु' . $totalAmount . '</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Payment Method:</span>
-                    <span class="info-value">' . htmlspecialchars($paymentMethod) . '</span>
+                    <span class="info-value" style="color: #22c55e; font-weight: 700; font-size: 18px;">₹' . $totalAmount . '</span>
                 </div>
             </div>
             
@@ -323,11 +326,7 @@ function sendNewOrderNotificationToAdmin($order) {
             ' . $screenshotHtml . '
             
             <div style="text-align: center; margin: 30px 0;">
-                <a href="' . htmlspecialchars($approveLink) . '" class="button" target="_blank" style="margin-right: 10px;">✓ Approve Order</a>
-                <a href="' . htmlspecialchars($rejectLink) . '" class="button" target="_blank" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">✗ Reject Order</a>
-                <div style="margin-top: 12px;">
-                    <a href="' . $baseUrl . '/admin/orders.php?order_id=' . urlencode($orderId) . '" target="_blank" style="color:#6b7280; font-size: 13px; text-decoration: underline;">Open order details</a>
-                </div>
+                <a href="' . htmlspecialchars($viewOrderLink) . '" class="button" target="_blank">View Order in Admin Panel</a>
             </div>
             
             <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0; border-radius: 4px;">
@@ -362,9 +361,24 @@ function sendNewOrderNotificationToAdmin($order) {
         $result = sendSMTPEmail(
             $adminEmail,
             $emailSubject,
-            $emailMessage
+            $emailMessage,
+            $smtpSettings['smtp_email'] ?? null,
+            $smtpSettings['smtp_from_name'] ?? null
         );
         
+        // One retry for transient SMTP issues
+        if (!$result['success']) {
+            error_log("Admin notification email first attempt FAILED for order #" . $orderId . ": " . ($result['error'] ?? 'Unknown error') . " - retrying once...");
+            @sleep(1);
+            $result = sendSMTPEmail(
+                $adminEmail,
+                $emailSubject,
+                $emailMessage,
+                $smtpSettings['smtp_email'] ?? null,
+                $smtpSettings['smtp_from_name'] ?? null
+            );
+        }
+
         if (!$result['success']) {
             $errorMsg = "Failed to send admin notification email for order #" . $orderId . ": " . ($result['error'] ?? 'Unknown error');
             error_log($errorMsg);
@@ -397,6 +411,37 @@ function ensureOrdersApprovedAtColumnExists($pdo) {
     } catch (Throwable $e) {
         return false;
     }
+}
+
+/**
+ * Treat URLs that look like images as invalid download links (common mistake: saving payment screenshot URL as product_link).
+ */
+function isLikelyImageUrl($url) {
+    if (!is_string($url)) return false;
+    $u = strtolower(trim($url));
+    if ($u === '') return false;
+    // Strip query/hash for extension check
+    $u2 = preg_replace('/[?#].*$/', '', $u);
+    return (bool)preg_match('/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i', $u2);
+}
+
+/**
+ * Normalize the product download link: pick the best candidate and ensure absolute URL if it starts with "/".
+ */
+function normalizeDownloadLink($primary, $fallback, $baseUrl) {
+    $primary = is_string($primary) ? trim($primary) : '';
+    $fallback = is_string($fallback) ? trim($fallback) : '';
+
+    // If primary looks like an image URL, ignore it and prefer fallback.
+    if ($primary !== '' && isLikelyImageUrl($primary)) $primary = '';
+    // If fallback looks like an image URL, ignore it too.
+    if ($fallback !== '' && isLikelyImageUrl($fallback)) $fallback = '';
+
+    $chosen = $primary !== '' ? $primary : $fallback;
+    if ($chosen !== '' && is_string($baseUrl) && $baseUrl !== '' && strpos($chosen, '/') === 0) {
+        return rtrim($baseUrl, '/') . $chosen;
+    }
+    return $chosen;
 }
 
 /**
@@ -457,10 +502,17 @@ switch ($method) {
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($order) {
-                // If order doesn't have product_link but product does, use product's link
-                if (empty($order['product_link']) && !empty($order['product_download_link'])) {
-                    $order['product_link'] = $order['product_download_link'];
-                }
+                // Build base URL (for making relative links absolute)
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? '';
+                $baseUrl = $host ? ($protocol . '://' . $host) : '';
+
+                // Prefer a valid download link; ignore image URLs accidentally saved as product_link.
+                $order['product_link'] = normalizeDownloadLink(
+                    $order['product_link'] ?? '',
+                    $order['product_download_link'] ?? '',
+                    $baseUrl
+                );
                 sendSuccess($order);
             } else {
                 sendError('Order not found', 404);
@@ -571,72 +623,44 @@ switch ($method) {
             ]);
             
             $orderId = $pdo->lastInsertId();
-            
-            // Send email notification to admin about new order (run in background)
-            // Use output buffering to prevent any output from interfering
-            if (function_exists('sendNewOrderNotificationToAdmin')) {
+            // Fetch order details once (used for both admin + customer emails)
+            $stmt = $pdo->prepare("SELECT o.*, p.title as product_title, p.price as product_price 
+                                   FROM orders o 
+                                   LEFT JOIN products p ON o.product_id = p.id 
+                                   WHERE o.id = ?");
+            $stmt->execute([$orderId]);
+            $orderDetails = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // IMPORTANT: These emails are triggered in this same request, before returning success to the frontend.
+            // The frontend only shows the confirmation page after this request completes.
+            $adminEmailResult = null;
+            $customerEmailResult = null;
+
+            if ($orderDetails && function_exists('sendNewOrderNotificationToAdmin')) {
                 try {
-                    // Get order details with product info for email
-                    $stmt = $pdo->prepare("SELECT o.*, p.title as product_title, p.price as product_price 
-                                           FROM orders o 
-                                           LEFT JOIN products p ON o.product_id = p.id 
-                                           WHERE o.id = ?");
-                    $stmt->execute([$orderId]);
-                    $orderDetails = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($orderDetails) {
-                        // Call the function - errors are logged internally
-                        $emailResult = sendNewOrderNotificationToAdmin($orderDetails);
-                        // Log the result for debugging
-                        if (!$emailResult || !$emailResult['success']) {
-                            error_log("Admin notification email FAILED for order #" . $orderId . ": " . json_encode($emailResult));
-                        } else {
-                            error_log("Admin notification email SENT successfully for order #" . $orderId . " to: " . ($emailResult['to'] ?? 'unknown'));
-                        }
-                    } else {
-                        error_log("Could not fetch order details for admin notification - order #" . $orderId);
-                    }
-                } catch (Exception $e) {
-                    // Log error but don't fail the order creation
+                    $adminEmailResult = sendNewOrderNotificationToAdmin($orderDetails);
+                } catch (Throwable $e) {
+                    $adminEmailResult = ['success' => false, 'error' => $e->getMessage()];
                     error_log("Exception sending admin notification for order #" . $orderId . ": " . $e->getMessage());
-                    error_log("Exception trace: " . $e->getTraceAsString());
                 }
-            } else {
-                error_log("Function sendNewOrderNotificationToAdmin not found! Check if smtp.php is included.");
             }
-            
-            // Send purchase confirmation email to customer (run in background)
-            if (function_exists('sendPurchaseConfirmationEmail')) {
+
+            if ($orderDetails && !empty($orderDetails['customer_email']) && function_exists('sendPurchaseConfirmationEmail')) {
                 try {
-                    // Get order details with product info for customer email
-                    $stmt = $pdo->prepare("SELECT o.*, p.title as product_title, p.price as product_price 
-                                           FROM orders o 
-                                           LEFT JOIN products p ON o.product_id = p.id 
-                                           WHERE o.id = ?");
-                    $stmt->execute([$orderId]);
-                    $orderDetails = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($orderDetails && !empty($orderDetails['customer_email'])) {
-                        // Call the function - errors are logged internally
-                        $emailResult = sendPurchaseConfirmationEmail($orderDetails);
-                        // Log the result for debugging
-                        if (!$emailResult || !$emailResult['success']) {
-                            error_log("Customer purchase confirmation email FAILED for order #" . $orderId . ": " . json_encode($emailResult));
-                        } else {
-                            error_log("Customer purchase confirmation email SENT successfully for order #" . $orderId . " to: " . ($emailResult['to'] ?? 'unknown'));
-                        }
-                    } else {
-                        error_log("Could not send customer confirmation - order #" . $orderId . " (email: " . ($orderDetails['customer_email'] ?? 'missing') . ")");
-                    }
-                } catch (Exception $e) {
-                    // Log error but don't fail the order creation
+                    $customerEmailResult = sendPurchaseConfirmationEmail($orderDetails);
+                } catch (Throwable $e) {
+                    $customerEmailResult = ['success' => false, 'error' => $e->getMessage()];
                     error_log("Exception sending customer purchase confirmation for order #" . $orderId . ": " . $e->getMessage());
-                    error_log("Exception trace: " . $e->getTraceAsString());
                 }
             }
             
             ob_end_clean();
-            sendSuccess(['id' => $orderId], 'Order created successfully');
+            sendSuccess([
+                'id' => $orderId,
+                'admin_email_sent' => (bool)($adminEmailResult['success'] ?? false),
+                'customer_email_sent' => (bool)($customerEmailResult['success'] ?? false),
+                'admin_email_error' => $adminEmailResult && empty($adminEmailResult['success']) ? ($adminEmailResult['error'] ?? 'Unknown error') : null
+            ], 'Order created successfully');
         } catch (PDOException $e) {
             ob_end_clean();
             sendError('Database error: ' . $e->getMessage());
@@ -685,6 +709,11 @@ switch ($method) {
         $isApproving = (isset($data['status']) && $data['status'] === 'approved');
         $wasApproved = ($currentOrder['status'] === 'approved');
 
+        // Base URL for normalizing relative links (and for emails)
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        $baseUrl = $host ? ($protocol . '://' . $host) : '';
+
         // For "count only after approve": set approved_at when status transitions to approved
         $hasApprovedAt = false;
         if ($isApproving && !$wasApproved) {
@@ -692,7 +721,7 @@ switch ($method) {
         }
         
         // If approving, automatically get product_link from product if not already set
-        if ($isApproving && empty($currentOrder['product_link']) && !empty($currentOrder['product_download_link'])) {
+        if ($isApproving && empty($currentOrder['product_link']) && !empty($currentOrder['product_download_link']) && !isLikelyImageUrl($currentOrder['product_download_link'])) {
             $data['product_link'] = $currentOrder['product_download_link'];
         }
         
@@ -721,6 +750,9 @@ switch ($method) {
         $params[] = $orderId;
         $sql = "UPDATE orders SET " . implode(', ', $updates) . ", updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         
+        $customerEmailSent = false;
+        $customerEmailError = null;
+
         try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -735,8 +767,12 @@ switch ($method) {
                 $stmt->execute([$orderId]);
                 $updatedOrder = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                // Use product_link from order (may have been auto-set from product)
-                $productLink = !empty($updatedOrder['product_link']) ? $updatedOrder['product_link'] : $updatedOrder['product_download_link'];
+                // Pick the best download link (ignore image urls like /uploads/*.jpg and make relative links absolute)
+                $productLink = normalizeDownloadLink(
+                    $updatedOrder['product_link'] ?? '',
+                    $updatedOrder['product_download_link'] ?? '',
+                    $baseUrl
+                );
                 
                 if (!empty($productLink) && !empty($updatedOrder['customer_email'])) {
                     // Automatically send email in background (don't wait for response)
@@ -745,24 +781,37 @@ switch ($method) {
                         // Log the result for debugging
                         if (!$emailResult || !$emailResult['success']) {
                             error_log("Product link email FAILED for order #" . $orderId . ": " . json_encode($emailResult));
+                            $customerEmailSent = false;
+                            $customerEmailError = $emailResult['error'] ?? 'Unknown email error';
                         } else {
                             error_log("Product link email SENT successfully for order #" . $orderId . " to: " . ($emailResult['to'] ?? $updatedOrder['customer_email']));
+                            $customerEmailSent = true;
+                            $customerEmailError = null;
                         }
                     } catch (Exception $e) {
                         error_log("Exception sending product link email for order #" . $orderId . ": " . $e->getMessage());
+                        $customerEmailSent = false;
+                        $customerEmailError = $e->getMessage();
                     }
                 } else {
                     if (empty($productLink)) {
                         error_log("Cannot send product link email for order #" . $orderId . ": Product link is empty. Please add product link in product settings or order details.");
+                        $customerEmailSent = false;
+                        $customerEmailError = 'Product link is empty. Please add product link in product settings or order details.';
                     }
                     if (empty($updatedOrder['customer_email'])) {
                         error_log("Cannot send product link email for order #" . $orderId . ": Customer email is missing.");
+                        $customerEmailSent = false;
+                        $customerEmailError = 'Customer email is missing.';
                     }
                 }
             }
             
             ob_end_clean();
-            sendSuccess([], 'Order updated successfully');
+            sendSuccess([
+                'customer_email_sent' => $customerEmailSent,
+                'customer_email_error' => $customerEmailError
+            ], 'Order updated successfully');
         } catch (PDOException $e) {
             ob_end_clean();
             sendError('Database error: ' . $e->getMessage());
@@ -866,26 +915,6 @@ function sendOrderApprovalEmail($order, $productLink) {
         $orderDate = !empty($order['created_at']) ? date('F j, Y, g:i a', strtotime($order['created_at'])) : date('F j, Y, g:i a');
         $paymentMethod = 'QR Payment (Banking/Esewa/Khalti)';
 
-        // Support contact (from settings)
-        $supportEmail = '';
-        $supportPhone = '';
-        $supportWhatsApp = '';
-        try {
-            $pdo = getDBConnection();
-            $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('contact_email','contact_phone','whatsapp_url')");
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($rows as $r) {
-                if ($r['setting_key'] === 'contact_email') $supportEmail = trim($r['setting_value']);
-                if ($r['setting_key'] === 'contact_phone') $supportPhone = trim($r['setting_value']);
-                if ($r['setting_key'] === 'whatsapp_url') $supportWhatsApp = trim($r['setting_value']);
-            }
-        } catch (Throwable $e) {
-            // ignore
-        }
-        $supportEmailSafe = htmlspecialchars($supportEmail ?: 'support@hamrodigicart.com');
-        $supportPhoneSafe = htmlspecialchars($supportPhone ?: '');
-        $supportWhatsAppSafe = htmlspecialchars($supportWhatsApp ?: '');
-        
         // Build improved email message
         $emailSubject = "🎉 Payment Verified - Your Product Download Link";
         
@@ -993,16 +1022,7 @@ function sendOrderApprovalEmail($order, $productLink) {
                 <p style="word-break: break-all; background: #fff; padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 0.9rem;">' . $safeProductLink . '</p>
             </div>
             
-            <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                <strong>Need help?</strong>
-                <div style="margin-top: 8px; color:#1f2937;">
-                    Support Email: <a href="mailto:' . $supportEmailSafe . '" style="color:#2563eb; text-decoration:none;">' . $supportEmailSafe . '</a><br>
-                    ' . (!empty($supportPhoneSafe) ? ('Support Phone: ' . $supportPhoneSafe . '<br>') : '') . '
-                    ' . (!empty($supportWhatsAppSafe) ? ('WhatsApp: <a href="' . $supportWhatsAppSafe . '" style="color:#2563eb; text-decoration:none;">Chat on WhatsApp</a>') : '') . '
-                </div>
-            </div>
-
-            <p>If you have any questions or need assistance, please don\'t hesitate to contact us using the details above.</p>
+            <p>If you have any questions or need assistance, please don\'t hesitate to contact us.</p>
             <p>Thank you for your purchase!</p>
             <p>Best regards,<br><strong>Hamro Digi Cart Team</strong></p>
         </div>
@@ -1019,7 +1039,9 @@ function sendOrderApprovalEmail($order, $productLink) {
         $result = sendSMTPEmail(
             $customerEmail,
             $emailSubject,
-            $emailMessage
+            $emailMessage,
+            $smtpSettings['smtp_email'] ?? null,
+            $smtpSettings['smtp_from_name'] ?? null
         );
         
         if (!$result['success']) {

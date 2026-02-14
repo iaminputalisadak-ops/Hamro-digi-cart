@@ -10,6 +10,7 @@
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^13.5.0",
     "ckeditor5": "^47.3.0",
+    "dompurify": "^3.3.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-helmet-async": "^2.0.5",
@@ -20,7 +21,13 @@
   "scripts": {
     "start": "cross-env NODE_OPTIONS=--max-old-space-size=4096 react-scripts start",
     "start:network": "cross-env HOST=0.0.0.0 NODE_OPTIONS=--max-old-space-size=4096 react-scripts start",
+    "start:3001": "cross-env PORT=3001 NODE_OPTIONS=--max-old-space-size=4096 react-scripts start",
+    "backend": "cd backend && php -S 0.0.0.0:8000 -c php.ini -t . router.php",
+    "dev": "concurrently -k -n BACKEND,FRONTEND -c green,cyan \"npm run backend\" \"npm start\"",
+    "dev:3001": "concurrently -k -n BACKEND,FRONTEND -c green,cyan \"npm run backend\" \"npm run start:3001\"",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 react-scripts build",
+    "deploy:ssh": "node scripts/deploy-ssh.mjs",
+    "optimize:images": "node scripts/optimize-images.mjs backend/uploads",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -43,6 +50,8 @@
     ]
   },
   "devDependencies": {
-    "cross-env": "^10.1.0"
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "sharp": "^0.33.5"
   }
 }

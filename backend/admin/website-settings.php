@@ -13,7 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'website_logo' => $_POST['website_logo'] ?? '',
             'website_favicon' => $_POST['website_favicon'] ?? '',
             'logo_text_line1' => $_POST['logo_text_line1'] ?? 'Hamro Digi',
-            'logo_text_line2' => $_POST['logo_text_line2'] ?? 'CART',
             'website_title' => $_POST['website_title'] ?? 'Hamro Digi Cart',
             'website_tagline' => $_POST['website_tagline'] ?? 'Best Digital Product In India',
             'website_description' => $_POST['website_description'] ?? '',
@@ -125,11 +124,6 @@ foreach ($settingsData as $row) {
                             <div class="form-group">
                                 <label>Logo Text Line 1</label>
                                 <input type="text" name="logo_text_line1" value="<?php echo htmlspecialchars($settings['logo_text_line1'] ?? 'Hamro Digi'); ?>" placeholder="Hamro Digi">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Logo Text Line 2</label>
-                                <input type="text" name="logo_text_line2" value="<?php echo htmlspecialchars($settings['logo_text_line2'] ?? 'CART'); ?>" placeholder="CART">
                             </div>
                         </div>
                     </div>

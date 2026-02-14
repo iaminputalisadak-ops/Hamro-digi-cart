@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fetchProductById } from '../utils/productService';
 import { stripHTMLSimple } from '../utils/htmlUtils';
+import SEO from '../components/SEO';
 import './ProductDownload.css';
 
 const ProductDownload = () => {
@@ -79,6 +80,7 @@ const ProductDownload = () => {
   if (loading) {
     return (
       <div className="download-loading">
+        <SEO title="Contact Details" robots="noindex, nofollow" />
         <div className="loading-spinner">Loading...</div>
       </div>
     );
@@ -87,6 +89,7 @@ const ProductDownload = () => {
   if (!product) {
     return (
       <div className="download-error">
+        <SEO title="Product Not Found" robots="noindex, nofollow" />
         <h2>Product Not Found</h2>
         <p>The product you're looking for doesn't exist.</p>
         <button onClick={() => navigate('/')} className="btn-primary">Go to Home</button>
@@ -105,18 +108,13 @@ const ProductDownload = () => {
   const match = cleanTitle.match(/(\d+)/);
   const productCount = match ? `${match[1]}+` : '500+';
 
-  // Handle logo/Home link click - refresh if on homepage, navigate otherwise
-  const handleHomeLinkClick = (e) => {
-    if (location.pathname === '/') {
-      // If already on homepage, refresh the page
-      e.preventDefault();
-      window.location.reload();
-    }
-    // Otherwise let React Router handle navigation normally
-  };
-
   return (
     <div className="product-download-page">
+      <SEO
+        title={`Contact Details - ${stripHTMLSimple(product.title)}`}
+        description="Enter your contact details to proceed to secure payment."
+        robots="noindex, nofollow"
+      />
       {/* Main Content */}
       <div className="download-main-content">
         <div className="download-content-container">
@@ -125,7 +123,13 @@ const ProductDownload = () => {
             {/* Product Image */}
             <div className="product-image-section">
               {productImage ? (
-                <img src={productImage} alt={stripHTMLSimple(product.title)} className="product-main-image" />
+                <img
+                  src={productImage}
+                  alt={stripHTMLSimple(product.title)}
+                  className="product-main-image"
+                  loading="eager"
+                  decoding="async"
+                />
               ) : (
                 <div className="product-image-placeholder">
                   <span>📦</span>

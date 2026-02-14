@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SEO from '../components/SEO';
 import { fetchPageByKey } from '../utils/pageService';
 import './PageTemplate.css';
 
@@ -108,6 +109,11 @@ const RefundPolicy = () => {
   if (loading) {
     return (
       <div className="page-template">
+        <SEO
+          title="Refund Policy"
+          description="Read Hamro Digi Cart's refund policy for digital product purchases."
+          keywords="refund policy, hamro digi cart, digital products, refunds"
+        />
         <div className="page-container">
           <div className="page-loading">Loading...</div>
         </div>
@@ -117,8 +123,13 @@ const RefundPolicy = () => {
 
   return (
     <div className="page-template">
+      <SEO
+        title="Refund Policy"
+        description="Read Hamro Digi Cart's refund policy for digital product purchases."
+        keywords="refund policy, hamro digi cart, digital products, refunds"
+      />
       <div className="page-container">
-        <div className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
+        <article className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
       </div>
     </div>
   );

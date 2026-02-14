@@ -3,20 +3,41 @@
  * Database Configuration
  */
 
-// Database credentials
-define('DB_HOST', 'localhost');
-define('DB_PORT', '3308');
-define('DB_NAME', 'hamrodigicart');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_CHARSET', 'utf8mb4');
+/**
+ * Database credentials
+ *
+ * Supports environment variables for cPanel/production, with sane defaults for local dev.
+ *
+ * Env vars (preferred on production):
+ * - HAMRODIGICART_DB_HOST
+ * - HAMRODIGICART_DB_PORT
+ * - HAMRODIGICART_DB_NAME
+ * - HAMRODIGICART_DB_USER
+ * - HAMRODIGICART_DB_PASS
+ * - HAMRODIGICART_DB_CHARSET
+ */
+function hamro_env($key, $default = null) {
+    $val = getenv($key);
+    if ($val === false || $val === null) return $default;
+    $val = trim((string)$val);
+    return $val === '' ? $default : $val;
+}
+
+// Database credentials (env overrides take precedence)
+define('DB_HOST', hamro_env('HAMRODIGICART_DB_HOST', 'localhost'));
+define('DB_PORT', hamro_env('HAMRODIGICART_DB_PORT', '3308')); // local default kept; set 3306 on cPanel
+define('DB_NAME', hamro_env('HAMRODIGICART_DB_NAME', 'hamrodigicart'));
+define('DB_USER', hamro_env('HAMRODIGICART_DB_USER', 'root'));
+define('DB_PASS', hamro_env('HAMRODIGICART_DB_PASS', ''));
+define('DB_CHARSET', hamro_env('HAMRODIGICART_DB_CHARSET', 'utf8mb4'));
 
 /**
  * Get database connection
  */
 function getDBConnection() {
     try {
-        $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+        $portPart = (is_string(DB_PORT) && trim(DB_PORT) !== '') ? (';port=' . DB_PORT) : '';
+        $dsn = "mysql:host=" . DB_HOST . $portPart . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

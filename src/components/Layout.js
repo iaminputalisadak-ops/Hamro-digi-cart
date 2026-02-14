@@ -30,9 +30,15 @@ const Layout = () => {
 
   return (
     <>
-      <Header />
-      <Outlet />
-      <Footer />
+      <header>
+        <Header />
+      </header>
+      <main>
+        <Outlet />
+      </main>
+      <footer>
+        <Footer />
+      </footer>
     </>
   );
 };

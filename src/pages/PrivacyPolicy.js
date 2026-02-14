@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SEO from '../components/SEO';
 import { fetchPageByKey } from '../utils/pageService';
 import './PageTemplate.css';
 
@@ -98,6 +99,11 @@ const PrivacyPolicy = () => {
   if (loading) {
     return (
       <div className="page-template">
+        <SEO
+          title="Privacy Policy"
+          description="Read Hamro Digi Cart's privacy policy and how we handle your information."
+          keywords="privacy policy, hamro digi cart, data protection"
+        />
         <div className="page-container">
           <div className="page-loading">Loading...</div>
         </div>
@@ -107,8 +113,13 @@ const PrivacyPolicy = () => {
 
   return (
     <div className="page-template">
+      <SEO
+        title="Privacy Policy"
+        description="Read Hamro Digi Cart's privacy policy and how we handle your information."
+        keywords="privacy policy, hamro digi cart, data protection"
+      />
       <div className="page-container">
-        <div className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
+        <article className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SEO from '../components/SEO';
 import { fetchPageByKey } from '../utils/pageService';
 import './PageTemplate.css';
 
@@ -80,6 +81,11 @@ const AboutUs = () => {
   if (loading) {
     return (
       <div className="page-template">
+        <SEO
+          title="About Us"
+          description="Learn about Hamro Digi Cart, our mission, and the digital products we offer."
+          keywords="about, hamro digi cart, digital products, reels bundles, templates"
+        />
         <div className="page-container">
           <div className="page-loading">Loading...</div>
         </div>
@@ -89,8 +95,13 @@ const AboutUs = () => {
 
   return (
     <div className="page-template">
+      <SEO
+        title="About Us"
+        description="Learn about Hamro Digi Cart, our mission, and the digital products we offer."
+        keywords="about, hamro digi cart, digital products, reels bundles, templates"
+      />
       <div className="page-container">
-        <div className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
+        <article className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
       </div>
     </div>
   );

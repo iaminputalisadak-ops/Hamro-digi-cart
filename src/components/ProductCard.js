@@ -14,15 +14,14 @@ const ProductCard = memo(({ product, onViewDetails, index = 0, onCardClick, onDo
 
   // Intersection Observer for scroll animations
   useEffect(() => {
+    const node = cardRef.current;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsVisible(true);
             // Add visible class for CSS animations
-            if (cardRef.current) {
-              cardRef.current.classList.add('visible');
-            }
+            if (node) node.classList.add('visible');
             // Unobserve after animation
             observer.unobserve(entry.target);
           }
@@ -34,14 +33,11 @@ const ProductCard = memo(({ product, onViewDetails, index = 0, onCardClick, onDo
       }
     );
 
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
-    }
+    if (node) observer.observe(node);
 
     return () => {
-      if (cardRef.current) {
-        observer.unobserve(cardRef.current);
-      }
+      if (node) observer.unobserve(node);
+      observer.disconnect();
     };
   }, []);
 

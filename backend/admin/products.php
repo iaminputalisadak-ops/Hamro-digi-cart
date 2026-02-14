@@ -342,21 +342,20 @@ $apiUrl = '../api/products.php';
                 
                 console.log('Upload response data:', data);
                 
-                if (data.success && data.data && data.data.url) {
-                    const imageUrl = data.data.url;
-                    console.log('Image uploaded successfully. Full URL:', imageUrl);
+                if (data.success && data.data && (data.data.path || data.data.url)) {
+                    // Prefer storing a portable root-relative path in DB (works across domains/schemes)
+                    const imagePath = data.data.path || data.data.url;
+                    console.log('Image uploaded successfully. Image path:', imagePath);
                     
                     // Verify URL is complete
-                    if (!imageUrl.includes('http://') && !imageUrl.includes('https://')) {
-                        console.warn('URL seems incomplete, attempting to fix...');
-                        // If URL is relative, make it absolute
-                        const baseUrl = window.location.origin;
-                        const fullUrl = imageUrl.startsWith('/') ? baseUrl + imageUrl : baseUrl + '/' + imageUrl;
-                        console.log('Fixed URL:', fullUrl);
-                        return fullUrl;
+                    if (!imagePath.includes('http://') && !imagePath.includes('https://')) {
+                        // Root-relative is ideal; ensure it starts with "/" for consistency
+                        const normalized = imagePath.startsWith('/') ? imagePath : '/' + imagePath;
+                        return normalized;
                     }
-                    
-                    return imageUrl;
+
+                    // Absolute URL (legacy/backward compat)
+                    return imagePath;
                 } else {
                     console.error('Upload failed - invalid response:', data);
                     throw new Error(data.error || 'Upload failed - no URL returned');

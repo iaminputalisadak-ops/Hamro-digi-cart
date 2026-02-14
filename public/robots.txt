@@ -25,4 +25,5 @@ Allow: /*.webp$
 Allow: /*.ico$
 
 # Sitemap location
-Sitemap: https://hamrodigicart.com/sitemap.xml
+# Note: sitemap.xml is auto-generated when products are added/updated via admin.
+Sitemap: /sitemap.xml

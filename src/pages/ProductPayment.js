@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fetchProductById, submitOrder, fetchPaymentQRCode } from '../utils/productService';
+import SEO from '../components/SEO';
 import qrCodeFallback from '../assets/qr_code.png';
 import './ProductPayment.css';
 
@@ -118,6 +119,11 @@ const ProductPayment = () => {
             };
 
             const newOrder = await submitOrder(orderData);
+            // Ensure admin notification email was attempted before moving to success page
+            // (The backend sends the email in the same request and returns adminEmailSent flag)
+            if (newOrder && newOrder.adminEmailSent === false) {
+                alert('Order saved, but admin notification email could not be sent. Please check SMTP settings in Admin → Settings.');
+            }
             navigate('/order-success', { state: { order: newOrder } });
         } catch (err) {
             console.error('Order submission error:', err);
@@ -131,6 +137,7 @@ const ProductPayment = () => {
     if (loading) {
         return (
             <div className="payment-loading">
+                <SEO title="Payment" robots="noindex, nofollow" />
                 <div className="loading-spinner">Loading product...</div>
             </div>
         );
@@ -139,6 +146,7 @@ const ProductPayment = () => {
     if (!product || !product.id) {
         return (
             <div className="payment-error">
+                <SEO title="Payment" robots="noindex, nofollow" />
                 <h2>Product Not Found</h2>
                 <p>Unable to load product information. Please try again.</p>
                 <button onClick={() => navigate('/')} className="btn-primary">Go to Home</button>
@@ -148,6 +156,11 @@ const ProductPayment = () => {
 
     return (
         <div className="product-payment-page">
+            <SEO
+                title={`Payment - ${product ? product.title : ''}`}
+                description="Secure payment page. Upload payment screenshot to complete your order."
+                robots="noindex, nofollow"
+            />
             <div className="payment-content-wrapper">
                 <div className="payment-card">
                 <div className="payment-header">

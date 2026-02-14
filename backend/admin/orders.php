@@ -310,7 +310,13 @@ $apiUrl = '../api/orders.php';
                         }
                         window.loadOrders();
                         if (status === 'approved') {
-                            showNotification('Order approved successfully! Product link will be automatically sent to customer.', 'success');
+                            const sent = !!(data.data && data.data.customer_email_sent);
+                            const err = (data.data && data.data.customer_email_error) ? String(data.data.customer_email_error) : '';
+                            if (sent) {
+                                showNotification('Order approved! 🎉 Payment Verified email sent to customer.', 'success');
+                            } else {
+                                showNotification('Order approved, but email was not sent. ' + (err ? ('Reason: ' + err) : ''), 'error');
+                            }
                         } else {
                             showNotification(`Order ${status} successfully!`, 'success');
                         }

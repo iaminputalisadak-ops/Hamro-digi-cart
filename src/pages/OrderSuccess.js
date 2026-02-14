@@ -1,22 +1,13 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { stripHTMLSimple } from '../utils/htmlUtils';
+import SEO from '../components/SEO';
 import './OrderSuccess.css';
 
 const OrderSuccess = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { order } = location.state || {};
-
-    // Handle logo/Home link click - refresh if on homepage, navigate otherwise
-    const handleHomeLinkClick = (e) => {
-        if (location.pathname === '/') {
-            // If already on homepage, refresh the page
-            e.preventDefault();
-            window.location.reload();
-        }
-        // Otherwise let React Router handle navigation normally
-    };
 
     useEffect(() => {
         // Scroll to top on mount
@@ -34,6 +25,7 @@ const OrderSuccess = () => {
     if (!order) {
         return (
             <div className="order-success-page">
+                <SEO title="Order Status" robots="noindex, nofollow" />
                 <div className="order-success-content">
                     <div className="success-header">
                         <h1>No Order Found</h1>
@@ -47,6 +39,11 @@ const OrderSuccess = () => {
 
     return (
         <div className="order-success-page">
+            <SEO
+                title="Order Received"
+                description="Your order has been received. Payment verification is pending."
+                robots="noindex, nofollow"
+            />
             <div className="order-success-content">
             <div className="success-header">
                 <div className="success-icon-container">

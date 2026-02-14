@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { fetchAllProducts, fetchProductById, subscribeToProductUpdates } from '../utils/productService';
 import { useWebsiteSettings } from '../hooks/useWebsiteSettings';
+import DOMPurify from 'dompurify';
 import { stripHTMLSimple } from '../utils/htmlUtils';
 import './ProductDetails.css';
 
@@ -13,6 +14,26 @@ const ProductDetails = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { settings } = useWebsiteSettings();
+
+  const descriptionForDisplay = useMemo(() => {
+    const raw = product?.description;
+    if (!raw || typeof raw !== 'string') {
+      return { kind: 'fallback', html: '', text: '' };
+    }
+
+    // CKEditor stores HTML. Some older/seeded items may be plain text.
+    const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(raw);
+    if (looksLikeHtml) {
+      const html = DOMPurify.sanitize(raw, {
+        USE_PROFILES: { html: true },
+        FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+        FORBID_ATTR: ['style']
+      });
+      return { kind: 'html', html, text: '' };
+    }
+
+    return { kind: 'text', html: '', text: raw };
+  }, [product?.description]);
 
   useEffect(() => {
     // Scroll to top on mount and when product ID changes
@@ -205,6 +226,8 @@ const ProductDetails = () => {
                     <img
                       src={productImage}
                       alt={stripHTMLSimple(product.title)}
+                      loading="eager"
+                      decoding="async"
                       style={{ width: '100%', height: 'auto', maxHeight: '600px', objectFit: 'contain' }}
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -257,9 +280,20 @@ const ProductDetails = () => {
             {/* Product Description */}
             <div className="product-description-section">
               <h3>{getDescriptionTitle()}</h3>
-              <p>
-                {stripHTMLSimple(product.description || `Get access to ${stripHTMLSimple(product.title)}. Perfect for social media creators looking to create engaging, viral content. This bundle includes high-quality animations and templates that are ready to use. No watermarks, no logos - just pure creative content to help you grow your online presence.`)}
-              </p>
+              {descriptionForDisplay.kind === 'html' ? (
+                <div
+                  className="product-description-content"
+                  dangerouslySetInnerHTML={{ __html: descriptionForDisplay.html }}
+                />
+              ) : descriptionForDisplay.kind === 'text' ? (
+                <p className="product-description-content product-description-prewrap">
+                  {descriptionForDisplay.text}
+                </p>
+              ) : (
+                <p className="product-description-content">
+                  {`Get access to ${stripHTMLSimple(product.title)}. Perfect for social media creators looking to create engaging, viral content. This bundle includes high-quality animations and templates that are ready to use. No watermarks, no logos - just pure creative content to help you grow your online presence.`}
+                </p>
+              )}
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 // Website Settings Service - Fetches website settings from PHP API
 
 import { apiRequest } from '../config/api';
+import { normalizeUploadsUrl } from './assetUrl';
 
 // Simple cache for website settings (in-memory cache)
 let settingsCache = null;
@@ -23,9 +24,19 @@ export const fetchWebsiteSettings = async (forceRefresh = false) => {
     
     const data = await apiRequest('website-settings.php');
     if (data.success) {
-      settingsCache = data.data;
+      // Normalize any stored "/uploads/..." URLs so they work on cPanel deployments
+      // where the backend lives under "/backend" and uploads are at "/backend/uploads/...".
+      const normalized = { ...data.data };
+      Object.keys(normalized).forEach((key) => {
+        const val = normalized[key];
+        if (typeof val === 'string' && val.includes('/uploads/')) {
+          normalized[key] = normalizeUploadsUrl(val);
+        }
+      });
+
+      settingsCache = normalized;
       settingsCacheTime = Date.now();
-      return data.data;
+      return normalized;
     }
     const defaultSettings = getDefaultSettings();
     settingsCache = defaultSettings;

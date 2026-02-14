@@ -30,6 +30,8 @@ backend/backend/uploads/*
 
 # local archives
 backend.zip
+deploy-cpanel.zip
+backend (2).zip
 
 npm-debug.log*
 yarn-debug.log*

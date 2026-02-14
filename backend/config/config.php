@@ -32,8 +32,8 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Handle preflight requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+// Handle preflight requests (skip in CLI)
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
@@ -250,7 +250,23 @@ function uploadFile($file, $allowedTypes = ['image/jpeg', 'image/png', 'image/gi
     $filepath = $uploadDir . $filename;
 
     if (@move_uploaded_file($file['tmp_name'], $filepath)) {
-        return ['success' => true, 'filename' => $filename, 'path' => '/uploads/' . $filename];
+        // Compute a web-accessible uploads path that works both locally and on cPanel.
+        // - Local dev (backend served at /): /uploads/<file>
+        // - cPanel typical (backend in /backend): /backend/uploads/<file>
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $basePath = '';
+        if (!empty($scriptName)) {
+            // Example: /backend/api/upload.php -> /backend
+            // Example: /api/upload.php -> /
+            $basePath = dirname($scriptName, 2);
+            $basePath = str_replace('\\', '/', $basePath);
+            if ($basePath === '/' || $basePath === '.' || $basePath === '\\') {
+                $basePath = '';
+            }
+            $basePath = rtrim($basePath, '/');
+        }
+
+        return ['success' => true, 'filename' => $filename, 'path' => $basePath . '/uploads/' . $filename];
     }
 
     return ['success' => false, 'error' => 'Failed to move uploaded file'];

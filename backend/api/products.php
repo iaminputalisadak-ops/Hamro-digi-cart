@@ -3,6 +3,7 @@
  * Products API
  */
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../utils/sitemap.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $pdo = getDBConnection();
@@ -136,7 +137,14 @@ switch ($method) {
                                WHERE p.id = ?");
         $stmt->execute([$productId]);
         $product = $stmt->fetch();
-        
+
+        // Auto-update sitemap after product changes (best-effort)
+        try {
+            writePublicSitemap($pdo);
+        } catch (Throwable $e) {
+            // ignore
+        }
+
         sendSuccess($product, 'Product created successfully');
         break;
         
@@ -164,7 +172,14 @@ switch ($method) {
             $data['status'] ?? 'active',
             $data['id']
         ]);
-        
+
+        // Auto-update sitemap after product changes (best-effort)
+        try {
+            writePublicSitemap($pdo);
+        } catch (Throwable $e) {
+            // ignore
+        }
+
         sendSuccess([], 'Product updated successfully');
         break;
         
@@ -177,7 +192,14 @@ switch ($method) {
         
         $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
         $stmt->execute([$_GET['id']]);
-        
+
+        // Auto-update sitemap after product changes (best-effort)
+        try {
+            writePublicSitemap($pdo);
+        } catch (Throwable $e) {
+            // ignore
+        }
+
         sendSuccess([], 'Product deleted successfully');
         break;
         

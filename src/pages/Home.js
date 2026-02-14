@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 import { fetchAllProducts, fetchAllCategories, subscribeToProductUpdates } from '../utils/productService';
 import { fetchAllOffers, generateOfferSlug } from '../utils/offerService';
 import { fetchActiveHomepageBanners } from '../utils/homepageBannerService';
@@ -13,7 +14,15 @@ const Home = () => {
   const [categories, setCategories] = useState([]);
   const [offers, setOffers] = useState([]);
   const [homepageBanners, setHomepageBanners] = useState([]);
+  const [bannersLoading, setBannersLoading] = useState(true);
   const bannerRowRef = useRef(null);
+  const bannerDragStateRef = useRef({
+    pointerDown: false,
+    startX: 0,
+    startScrollLeft: 0,
+    didDrag: false,
+    pointerId: null
+  });
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
   const [isMobile, setIsMobile] = useState(window.matchMedia ? window.matchMedia('(max-width: 768px)').matches : window.innerWidth <= 768);
@@ -21,25 +30,24 @@ const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { settings } = useWebsiteSettings();
+  const [preloadedBannerUrl, setPreloadedBannerUrl] = useState('');
 
   // Function to load products and categories from API
   const loadProductsAndCategories = async () => {
     try {
-      // Fetch categories from API
-      const loadedCategories = await fetchAllCategories();
-      setCategories(loadedCategories || []);
+      // Fetch in parallel (faster first paint)
+      setBannersLoading(true);
+      const [catsRes, prodsRes, offersRes, bannersRes] = await Promise.allSettled([
+        fetchAllCategories(),
+        fetchAllProducts(),
+        fetchAllOffers(),
+        fetchActiveHomepageBanners()
+      ]);
 
-      // Fetch products from API
-      const loadedProducts = await fetchAllProducts();
-      setProducts(loadedProducts || []);
-
-      // Fetch offers from API
-      const loadedOffers = await fetchAllOffers();
-      setOffers(loadedOffers || []);
-
-      // Fetch active homepage banners (for slider)
-      const loadedBanners = await fetchActiveHomepageBanners();
-      setHomepageBanners(loadedBanners || []);
+      setCategories(catsRes.status === 'fulfilled' ? (catsRes.value || []) : []);
+      setProducts(prodsRes.status === 'fulfilled' ? (prodsRes.value || []) : []);
+      setOffers(offersRes.status === 'fulfilled' ? (offersRes.value || []) : []);
+      setHomepageBanners(bannersRes.status === 'fulfilled' ? (bannersRes.value || []) : []);
     } catch (error) {
       console.error('Error loading products and categories:', error);
       // Set empty arrays on error to prevent undefined issues
@@ -47,6 +55,8 @@ const Home = () => {
       setProducts([]);
       setOffers([]);
       setHomepageBanners([]);
+    } finally {
+      setBannersLoading(false);
     }
   };
 
@@ -82,6 +92,33 @@ const Home = () => {
       setShowPopup(false);
     }
   }, [settings, location.pathname]);
+
+  // Preload the above-the-fold banner image for faster LCP
+  useEffect(() => {
+    try {
+      if (!homepageBanners || homepageBanners.length === 0) return;
+      const first = homepageBanners[0];
+      const useDevice = String(first?.use_device_images || '0') === '1' || first?.use_device_images === 1;
+      const imgUrl =
+        useDevice
+          ? (isMobile ? (first.image_path_mobile || first.image_path) : (first.image_path_desktop || first.image_path))
+          : first.image_path;
+      if (!imgUrl || imgUrl === preloadedBannerUrl) return;
+
+      const existing = document.querySelector('link[data-preload="hero-banner"]');
+      if (existing) existing.remove();
+
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = imgUrl;
+      link.setAttribute('data-preload', 'hero-banner');
+      document.head.appendChild(link);
+      setPreloadedBannerUrl(imgUrl);
+    } catch (e) {
+      // ignore
+    }
+  }, [homepageBanners, isMobile, preloadedBannerUrl]);
 
   // Track mobile breakpoint for homepage category layout (mobile-only changes)
   useEffect(() => {
@@ -249,10 +286,6 @@ const Home = () => {
   // - card click -> /product/:id
   // - download button -> /product/:id/download
 
-  const handleViewAll = (categorySlug) => {
-    navigate(`/${categorySlug}`);
-  };
-
   // Group products by category - show all products
   const getProductsByCategory = (categoryName) => {
     return products.filter(p => {
@@ -261,12 +294,6 @@ const Home = () => {
       const matchCategory = categoryName ? categoryName.trim() : '';
       return productCategory === matchCategory;
     });
-  };
-
-  // Get limited products for homepage display - always show 5 products
-  const getLimitedProductsByCategory = (categoryName) => {
-    const allProducts = getProductsByCategory(categoryName);
-    return allProducts.slice(0, isMobile ? 4 : 5);
   };
 
   const toggleCategoryExpanded = (categoryId) => {
@@ -283,8 +310,133 @@ const Home = () => {
     setShowPopup(false);
   };
 
+  // Banner navigation: support internal routes and external links
+  const normalizeBannerHref = (raw) => {
+    const h = typeof raw === 'string' ? raw.trim() : '';
+    if (!h) return '';
+    // If admin types "reels-bundle" (no leading slash), treat as internal route.
+    if (!h.startsWith('/') && !/^https?:\/\//i.test(h) && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(h)) {
+      return `/${h}`;
+    }
+    return h;
+  };
+
+  const getBannerLinkProps = (rawHref) => {
+    const href = normalizeBannerHref(rawHref);
+    if (!href) return { href: '' };
+
+    const isInternal = href.startsWith('/') && !href.startsWith('//');
+    const isHttp = /^https?:\/\//i.test(href);
+
+    // For internal routes: use SPA navigation (fast, no refresh)
+    if (isInternal) {
+      return {
+        href,
+        onClick: (e) => {
+          e.preventDefault();
+          navigate(href);
+        }
+      };
+    }
+
+    // For external URLs: open in new tab
+    if (isHttp) {
+      return {
+        href,
+        target: '_blank',
+        rel: 'noopener noreferrer'
+      };
+    }
+
+    // For other schemes (mailto:, tel:, etc.) let browser handle
+    return { href };
+  };
+
+  const openBannerHref = (rawHref) => {
+    const href = normalizeBannerHref(rawHref);
+    if (!href) return;
+    const isInternal = href.startsWith('/') && !href.startsWith('//');
+    const isHttp = /^https?:\/\//i.test(href);
+    if (isInternal) {
+      navigate(href);
+      return;
+    }
+    if (isHttp) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    // other schemes (mailto:, tel:, etc.)
+    window.location.href = href;
+  };
+
+  const onBannerPointerDown = (e) => {
+    const el = bannerRowRef.current;
+    if (!el) return;
+    // Only left mouse / primary touch
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    bannerDragStateRef.current.pointerDown = true;
+    bannerDragStateRef.current.startX = e.clientX;
+    bannerDragStateRef.current.startScrollLeft = el.scrollLeft;
+    bannerDragStateRef.current.didDrag = false;
+    bannerDragStateRef.current.pointerId = e.pointerId;
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch (err) {
+      // ignore
+    }
+    el.classList.add('is-dragging');
+  };
+
+  const onBannerPointerMove = (e) => {
+    const el = bannerRowRef.current;
+    if (!el) return;
+    if (!bannerDragStateRef.current.pointerDown) return;
+    const dx = e.clientX - bannerDragStateRef.current.startX;
+    if (Math.abs(dx) > 4) bannerDragStateRef.current.didDrag = true;
+    el.scrollLeft = bannerDragStateRef.current.startScrollLeft - dx;
+    // Prevent text selection / default gestures while dragging
+    if (e.cancelable) e.preventDefault();
+  };
+
+  const onBannerPointerUp = (e) => {
+    const el = bannerRowRef.current;
+    if (!el) return;
+    bannerDragStateRef.current.pointerDown = false;
+    try {
+      if (bannerDragStateRef.current.pointerId != null) {
+        el.releasePointerCapture(bannerDragStateRef.current.pointerId);
+      }
+    } catch (err) {
+      // ignore
+    }
+    el.classList.remove('is-dragging');
+    // Keep didDrag true for a tick so click handlers can ignore it
+    setTimeout(() => {
+      bannerDragStateRef.current.didDrag = false;
+    }, 0);
+  };
+
   return (
     <div className="home-page">
+      <SEO
+        title={settings?.website_title || 'Hamro Digi Cart'}
+        description={settings?.website_description || settings?.website_tagline || 'Buy premium digital products, reels bundles, templates, and more. Instant download and lifetime access.'}
+        keywords="digital products, reels bundle, templates, download, Hamro Digi Cart, Nepal"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": settings?.website_title || "Hamro Digi Cart",
+          "url": process.env.REACT_APP_SITE_URL || (process.env.NODE_ENV === 'production' ? 'https://hamrodigicart.com' : 'http://localhost:3000'),
+          "logo": settings?.website_logo || undefined,
+          "sameAs": [
+            settings?.facebook_url || undefined,
+            settings?.instagram_url || undefined,
+            settings?.youtube_url || undefined,
+            settings?.twitter_url || undefined,
+            settings?.whatsapp_url || undefined
+          ].filter(Boolean)
+        }}
+      />
       {/* Popup Notification */}
       {showPopup && settings?.popup_enabled === '1' && (settings?.popup_title || settings?.popup_content || settings?.popup_image) && (
         <div className="notification-popup-overlay" onClick={handleClosePopup}>
@@ -308,7 +460,16 @@ const Home = () => {
         </div>
       )}
 
-      {homepageBanners && homepageBanners.length > 0 ? (
+      {bannersLoading ? (
+        <section className="promotional-banners" aria-label="Homepage banners loading">
+          <div className="hero-banners-row-wrap">
+            <div className="hero-banners-grid">
+              <div className="hero-banner-card hero-banner-skeleton" aria-hidden="true" />
+              <div className="hero-banner-card hero-banner-skeleton" aria-hidden="true" />
+            </div>
+          </div>
+        </section>
+      ) : homepageBanners && homepageBanners.length > 0 ? (
         <section className="promotional-banners">
           {(() => {
             // Only show banners created from the Homepage Banner admin module (no fallback banners)
@@ -371,14 +532,51 @@ const Home = () => {
                   </>
                 ) : null}
 
-                <div className="hero-banners-grid" ref={bannerRowRef}>
+                <div
+                  className="hero-banners-grid"
+                  ref={bannerRowRef}
+                  onPointerDown={onBannerPointerDown}
+                  onPointerMove={onBannerPointerMove}
+                  onPointerUp={onBannerPointerUp}
+                  onPointerCancel={onBannerPointerUp}
+                >
                   {bannersToShow.map((b, idx) => {
                     const hasContent = !!(b?.title || b?.subtitle || b?.button_text);
                     const buttonHref = b?.button_link || b?.link_url || '';
+                    const imgSrc = getBannerImage(b);
+                    const isHero = idx === 0; // above-the-fold candidate
+                    const altText = b?.title ? String(b.title) : 'Homepage banner';
+                    const cardHref = b?.link_url || '';
 
                     return (
-                      <div className="hero-banner-card" key={b.id ?? `hero-banner-${idx}`}>
-                        <img className="hero-banner-bg" src={getBannerImage(b)} alt="Homepage banner" />
+                      <div
+                        className={`hero-banner-card ${cardHref ? 'is-clickable' : ''}`}
+                        key={b.id ?? `hero-banner-${idx}`}
+                        role={cardHref ? 'link' : undefined}
+                        tabIndex={cardHref ? 0 : undefined}
+                        onClick={() => {
+                          // If the user just dragged to scroll, don't treat as a click.
+                          if (bannerDragStateRef.current.didDrag) return;
+                          if (cardHref) openBannerHref(cardHref);
+                        }}
+                        onKeyDown={(e) => {
+                          if (!cardHref) return;
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            openBannerHref(cardHref);
+                          }
+                        }}
+                      >
+                        <img
+                          className="hero-banner-bg"
+                          src={imgSrc}
+                          alt={altText}
+                          loading={isHero ? 'eager' : 'lazy'}
+                          decoding="async"
+                          fetchpriority={isHero ? 'high' : 'auto'}
+                          width="1200"
+                          height="520"
+                        />
                         {hasContent ? <div className="hero-banner-overlay" /> : null}
 
                         {hasContent ? (
@@ -386,15 +584,19 @@ const Home = () => {
                             {b?.title ? <h2 className="hero-banner-title">{b.title}</h2> : null}
                             {b?.subtitle ? <p className="hero-banner-subtitle">{b.subtitle}</p> : null}
                             {b?.button_text && buttonHref ? (
-                              <a className="hero-banner-cta" href={buttonHref}>
+                              <a
+                                className="hero-banner-cta"
+                                {...getBannerLinkProps(buttonHref)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const props = getBannerLinkProps(buttonHref);
+                                  if (typeof props.onClick === 'function') props.onClick(e);
+                                }}
+                              >
                                 {b.button_text}
                               </a>
                             ) : null}
                           </div>
-                        ) : null}
-
-                        {b?.link_url ? (
-                          <a className="hero-banner-link-overlay" href={b.link_url} aria-label={b.title || 'Open banner link'} />
                         ) : null}
                       </div>
                     );

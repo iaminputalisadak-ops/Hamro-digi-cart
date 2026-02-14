@@ -396,6 +396,22 @@ All data is stored in the database, making it easy to transfer the entire projec
 
 #### Windows
 
+**Single command (recommended):**
+```bash
+npm run dev
+```
+
+This starts:
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:3000`
+
+If port **3000** is already in use, run:
+```bash
+npm run dev:3001
+```
+
+This starts the frontend at `http://localhost:3001`.
+
 **Terminal 1 - Start Backend:**
 ```bash
 start-backend.bat
@@ -445,6 +461,22 @@ npm run build
 # Deploy the build folder to your web server
 # Deploy the backend folder to your PHP server
 ```
+
+## ⚡ Performance + SEO
+
+### Image optimization (recommended)
+- Upload **WebP** for banners/images where possible.
+- To convert existing uploaded images to WebP (max width **1200px**) run:
+
+```bash
+npm run optimize:images
+```
+
+This creates `.webp` files **alongside** originals in `backend/uploads/` (it does not delete originals). After converting, update banner image URLs in admin to point to the `.webp` version for best speed.
+
+### Sitemap + robots
+- `public/sitemap.xml` is **auto-updated** whenever products are created/updated/deleted via the admin product API.
+- `public/robots.txt` references `/sitemap.xml`.
 
 ## 👨‍💼 Admin Panel
 

@@ -1,6 +1,7 @@
 // Product Service - Fetches products from PHP API
 
 import { apiRequest } from '../config/api';
+import { normalizeUploadsUrl } from './assetUrl';
 
 /**
  * Fetch all products from the API
@@ -14,8 +15,9 @@ export const fetchAllProducts = async () => {
       return data.data.map(product => ({
         ...product,
         category: product.category_name || product.category || '',
+        image: product.image ? normalizeUploadsUrl(product.image) : product.image,
         // Ensure compatibility with old format
-        images: product.image ? [product.image] : []
+        images: product.image ? [normalizeUploadsUrl(product.image)] : []
       }));
     }
     return [];
@@ -39,7 +41,8 @@ export const fetchProductById = async (productId) => {
       return {
         ...product,
         category: product.category_name || product.category || '',
-        images: product.image ? [product.image] : []
+        image: product.image ? normalizeUploadsUrl(product.image) : product.image,
+        images: product.image ? [normalizeUploadsUrl(product.image)] : []
       };
     }
     return null;
@@ -72,7 +75,8 @@ export const fetchProductsByCategory = async (categoryName) => {
       return productsData.data.map(product => ({
         ...product,
         category: product.category_name || product.category || '',
-        images: product.image ? [product.image] : []
+        image: product.image ? normalizeUploadsUrl(product.image) : product.image,
+        images: product.image ? [normalizeUploadsUrl(product.image)] : []
       }));
     }
     return [];
@@ -121,7 +125,8 @@ export const searchProducts = async (query) => {
       return data.data.map(product => ({
         ...product,
         category: product.category_name || product.category || '',
-        images: product.image ? [product.image] : []
+        image: product.image ? normalizeUploadsUrl(product.image) : product.image,
+        images: product.image ? [normalizeUploadsUrl(product.image)] : []
       }));
     }
     return [];
@@ -190,6 +195,9 @@ export const submitOrder = async (orderData) => {
           customerPhone: apiOrderData.customer_phone || '',
           totalAmount: apiOrderData.total_amount, // Include totalAmount for OrderSuccess page
           total_amount: apiOrderData.total_amount, // Keep snake_case for compatibility
+          adminEmailSent: !!data.data.admin_email_sent,
+          customerEmailSent: !!data.data.customer_email_sent,
+          adminEmailError: data.data.admin_email_error || null,
           status: 'pending',
           date: new Date().toLocaleString()
         };

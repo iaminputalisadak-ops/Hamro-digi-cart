@@ -30,7 +30,7 @@ $apiUrl = '../api/homepage-banners.php';
         }
         .hb-grid {
             display: grid;
-            grid-template-columns: 420px 1fr;
+            grid-template-columns: 1fr;
             gap: 18px;
             align-items: start;
         }
@@ -159,6 +159,57 @@ $apiUrl = '../api/homepage-banners.php';
         @media (max-width: 1100px) {
             .hb-grid { grid-template-columns: 1fr; }
         }
+
+        /* Product link suggestions (autocomplete) */
+        .hb-autocomplete {
+            position: relative;
+        }
+        .hb-suggest {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            box-shadow: 0 14px 28px rgba(0,0,0,0.12);
+            max-height: 260px;
+            overflow: auto;
+            z-index: 10050;
+            display: none;
+        }
+        .hb-suggest-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .hb-suggest-item:last-child { border-bottom: none; }
+        .hb-suggest-item:hover { background: #f9fafb; }
+        .hb-suggest-title {
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.2;
+        }
+        .hb-suggest-sub {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        .hb-suggest-action {
+            flex: 0 0 auto;
+            font-weight: 900;
+            font-size: 12px;
+            color: #16a34a;
+            border: 1px solid rgba(22, 163, 74, 0.25);
+            background: rgba(22, 163, 74, 0.08);
+            padding: 6px 10px;
+            border-radius: 999px;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
@@ -180,64 +231,6 @@ $apiUrl = '../api/homepage-banners.php';
                 </div>
 
                 <div class="hb-grid">
-                    <!-- Left column: settings + preview -->
-                    <div style="display:flex; flex-direction:column; gap:18px;">
-                        <div class="hb-card">
-                            <div class="hb-card-header">
-                                <h2>Display Settings</h2>
-                                <div class="hb-help">Controls how banners behave on the homepage.</div>
-                            </div>
-                            <div class="hb-card-body">
-                                <div id="displaySettingsMsg" style="display:none; padding: 10px 12px; border-radius: 10px; margin-bottom: 12px;"></div>
-                                <form id="displaySettingsForm">
-                                    <div class="hb-form-grid">
-                                        <div class="hb-kv">
-                                            <label style="display:flex; align-items:center; gap:10px; font-weight:800;">
-                                                <input type="checkbox" id="bannerAutoplay" name="homepage_banner_autoplay">
-                                                Autoplay
-                                            </label>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Slide Duration (sec)</label>
-                                            <input type="number" id="bannerDuration" name="homepage_banner_duration" min="1" step="1" value="5">
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Banner Height (px)</label>
-                                            <input type="number" id="bannerHeight" name="homepage_banner_height" min="120" step="10" value="260">
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Animation</label>
-                                            <select id="bannerAnimation" name="homepage_banner_animation">
-                                                <option value="slide">Slide</option>
-                                                <option value="fade">Fade</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="action-buttons" style="margin-top: 14px;">
-                                        <button type="submit" class="btn btn-primary">Save</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-
-                        <div class="hb-card">
-                            <div class="hb-card-header">
-                                <h2>Live Preview</h2>
-                                <div class="hb-help">Preview banners for desktop and mobile.</div>
-                            </div>
-                            <div class="hb-card-body hb-preview-grid">
-                                <div>
-                                    <div class="hb-subtle" style="font-weight:800; margin-bottom:8px;">Desktop</div>
-                                    <div id="previewDesktop" class="hb-preview-shell"></div>
-                                </div>
-                                <div>
-                                    <div class="hb-subtle" style="font-weight:800; margin-bottom:8px;">Mobile</div>
-                                    <div id="previewMobile" class="hb-preview-shell" style="max-width: 375px;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Right column: manage banners -->
                     <div class="hb-card">
                         <div class="hb-card-header">
@@ -270,12 +263,11 @@ $apiUrl = '../api/homepage-banners.php';
                                         <th>Title</th>
                                         <th>Subtitle</th>
                                         <th style="width: 150px;">Status</th>
-                                        <th style="width: 180px;">Order</th>
                                         <th style="min-width: 160px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="banners-table">
-                                    <tr><td colspan="7">Loading...</td></tr>
+                                    <tr><td colspan="6">Loading...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -307,8 +299,12 @@ $apiUrl = '../api/homepage-banners.php';
 
                 <div class="form-group">
                     <label>Banner Link/URL (Optional)</label>
-                    <input type="text" id="bannerLinkUrl" name="link_url" placeholder="e.g., /reels-bundle or https://example.com">
+                    <div class="hb-autocomplete">
+                        <input type="text" id="bannerLinkUrl" name="link_url" placeholder="e.g., /reels-bundle or https://example.com">
+                        <div id="bannerLinkSuggestions" class="hb-suggest" aria-label="Product suggestions"></div>
+                    </div>
                     <small style="color:#666;">If set, clicking the banner can open this link (frontend behavior).</small>
+                    <small style="color:#6b7280;">Tip: start typing a product name to pick from suggestions.</small>
                 </div>
                 
                 <div class="form-group">
@@ -361,22 +357,20 @@ $apiUrl = '../api/homepage-banners.php';
                     </div>
                     <div class="form-group">
                         <label>Button Link (Optional)</label>
-                        <input type="text" id="bannerButtonLink" name="button_link" placeholder="e.g., /reels-bundle">
+                        <div class="hb-autocomplete">
+                            <input type="text" id="bannerButtonLink" name="button_link" placeholder="e.g., /reels-bundle">
+                            <div id="bannerButtonLinkSuggestions" class="hb-suggest" aria-label="Product suggestions"></div>
+                        </div>
                     </div>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div style="display: grid; grid-template-columns: 1fr; gap: 14px;">
                     <div class="form-group">
                         <label>Status</label>
                         <select id="bannerStatus" name="status">
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Display Order</label>
-                        <input type="number" id="bannerOrder" name="display_order" value="0" min="0" step="1">
-                        <small style="color: #666;">Lower number shows first.</small>
                     </div>
                 </div>
 
@@ -394,20 +388,111 @@ $apiUrl = '../api/homepage-banners.php';
     <script>
         const apiUrl = '<?php echo $apiUrl; ?>';
         const uploadUrl = '../api/upload.php';
-        const settingsApiUrl = '../api/settings.php';
+        const productsApiUrl = '../api/products.php';
         let bannersCache = [];
-        let bannerDisplaySettings = {
-            autoplay: false,
-            duration: 5,
-            height: 260,
-            animation: 'slide'
-        };
         
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Product suggestions for link fields (typeahead -> fills /product/:id)
+        function debounce(fn, wait) {
+            let t = null;
+            return function(...args) {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), wait);
+            };
+        }
+
+        function looksLikeDirectUrlOrPath(v) {
+            const s = String(v || '').trim();
+            if (!s) return false;
+            if (s.startsWith('/')) return true;
+            if (/^https?:\/\//i.test(s)) return true;
+            if (/^www\./i.test(s)) return true;
+            if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s)) return true; // mailto:, tel:, etc.
+            return false;
+        }
+
+        async function fetchProductSuggestions(query) {
+            const q = String(query || '').trim();
+            if (q.length < 2) return [];
+            const res = await fetch(`${productsApiUrl}?suggest=${encodeURIComponent(q)}&limit=8`);
+            const data = await res.json();
+            if (!data || !data.success) return [];
+            return Array.isArray(data.data) ? data.data : [];
+        }
+
+        function attachProductAutocomplete(inputId, dropdownId) {
+            const input = document.getElementById(inputId);
+            const dropdown = document.getElementById(dropdownId);
+            if (!input || !dropdown) return;
+
+            let lastReq = 0;
+
+            const hide = () => {
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
+            };
+
+            const render = (items) => {
+                if (!items || !items.length) return hide();
+                dropdown.innerHTML = items.map((it) => {
+                    const id = it.id;
+                    const title = escapeHtml(it.title || '');
+                    const cat = escapeHtml(it.category || '');
+                    return `
+                      <div class="hb-suggest-item" data-product-id="${escapeHtml(String(id))}">
+                        <div>
+                          <div class="hb-suggest-title">${title}</div>
+                          <div class="hb-suggest-sub">${cat ? ('Category: ' + cat) : ('Product ID: ' + escapeHtml(String(id)))}</div>
+                        </div>
+                        <div class="hb-suggest-action">Use</div>
+                      </div>
+                    `;
+                }).join('');
+                dropdown.style.display = 'block';
+            };
+
+            const doSearch = debounce(async () => {
+                const q = input.value.trim();
+                if (q.length < 2) return hide();
+                // If user is typing a URL/path already, don't show suggestions
+                if (looksLikeDirectUrlOrPath(q)) return hide();
+
+                const reqId = ++lastReq;
+                try {
+                    const items = await fetchProductSuggestions(q);
+                    if (reqId !== lastReq) return; // stale
+                    render(items);
+                } catch (e) {
+                    hide();
+                }
+            }, 220);
+
+            input.addEventListener('input', doSearch);
+            input.addEventListener('focus', doSearch);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') hide();
+            });
+
+            dropdown.addEventListener('click', (e) => {
+                const row = e.target.closest('.hb-suggest-item');
+                if (!row) return;
+                const id = row.getAttribute('data-product-id');
+                if (!id) return;
+                input.value = `/product/${id}`;
+                hide();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (e.target === input) return;
+                if (dropdown.contains(e.target)) return;
+                hide();
+            });
         }
         
         function statusBadge(status) {
@@ -426,13 +511,12 @@ $apiUrl = '../api/homepage-banners.php';
                     if (data.success) {
                         displayBanners(data.data || []);
                         updateBulkCount();
-                        renderPreviews();
                     } else {
-                        document.getElementById('banners-table').innerHTML = `<tr><td colspan="7">Error: ${escapeHtml(data.error || 'Unknown error')}</td></tr>`;
+                        document.getElementById('banners-table').innerHTML = `<tr><td colspan="6">Error: ${escapeHtml(data.error || 'Unknown error')}</td></tr>`;
                     }
                 })
                 .catch(err => {
-                    document.getElementById('banners-table').innerHTML = `<tr><td colspan="7">Error: ${escapeHtml(err.message || 'Failed to load')}</td></tr>`;
+                    document.getElementById('banners-table').innerHTML = `<tr><td colspan="6">Error: ${escapeHtml(err.message || 'Failed to load')}</td></tr>`;
                 });
         }
         
@@ -440,7 +524,7 @@ $apiUrl = '../api/homepage-banners.php';
             bannersCache = Array.isArray(banners) ? banners : [];
             const tbody = document.getElementById('banners-table');
             if (!banners.length) {
-                tbody.innerHTML = '<tr><td colspan="7">No banners found. Click "+ Add New Banner" to create one.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6">No banners found. Click "+ Add New Banner" to create one.</td></tr>';
                 return;
             }
             
@@ -448,7 +532,6 @@ $apiUrl = '../api/homepage-banners.php';
                 const img = b.image_path ? `<img src="${escapeHtml(b.image_path)}" alt="Banner" style="width:72px;height:48px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;">` : '-';
                 const safeId = Number(b.id);
                 const isActive = String(b.status || '').toLowerCase() === 'active';
-                const orderVal = Number.isFinite(Number(b.display_order)) ? Number(b.display_order) : 0;
                 const linkPreview = b.link_url ? `<a href="${escapeHtml(b.link_url)}" target="_blank" rel="noreferrer" style="color:#2563eb; text-decoration:underline; font-weight:800;">Open</a>` : '';
                 return `
                     <tr>
@@ -470,21 +553,6 @@ $apiUrl = '../api/homepage-banners.php';
                           >
                             ${isActive ? 'Active' : 'Inactive'}
                           </button>
-                        </td>
-                        <td>
-                          <div class="hb-order-controls">
-                            <button class="hb-icon-btn" type="button" onclick="nudgeBannerOrder(${safeId}, -1)" title="Move up">▲</button>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              value="${escapeHtml(String(orderVal))}"
-                              onchange="saveBannerOrder(${safeId}, this.value)"
-                              aria-label="Display order"
-                            />
-                            <button class="hb-icon-btn" type="button" onclick="nudgeBannerOrder(${safeId}, 1)" title="Move down">▼</button>
-                          </div>
-                          <div class="hb-subtle" style="margin-top:6px; font-weight:800;">Lower shows first</div>
                         </td>
                         <td>
                             <button class="btn btn-edit btn-small" onclick="editBanner(${b.id})">Edit</button>
@@ -560,24 +628,6 @@ $apiUrl = '../api/homepage-banners.php';
             }
         }
 
-        async function saveBannerOrder(id, value) {
-            const newOrder = parseInt(value || '0', 10);
-            try {
-                await updateBannerPartial(id, { display_order: isNaN(newOrder) ? 0 : newOrder });
-                loadBanners();
-                showNotification('Banner order saved!', 'success');
-            } catch (err) {
-                alert('Error: ' + (err.message || 'Failed to save order'));
-            }
-        }
-
-        async function nudgeBannerOrder(id, delta) {
-            const b = getBannerFromCache(id);
-            const current = Number.isFinite(Number(b?.display_order)) ? Number(b.display_order) : 0;
-            const next = Math.max(0, current + Number(delta || 0));
-            return saveBannerOrder(id, String(next));
-        }
-        
         function openBannerModal(banner = null) {
             document.getElementById('bannerModal').style.display = 'flex';
             document.getElementById('modalTitle').textContent = banner ? 'Edit Banner' : 'Add New Banner';
@@ -607,7 +657,6 @@ $apiUrl = '../api/homepage-banners.php';
                 document.getElementById('bannerButtonText').value = banner.button_text || '';
                 document.getElementById('bannerButtonLink').value = banner.button_link || '';
                 document.getElementById('bannerStatus').value = (banner.status || 'active').toLowerCase() === 'inactive' ? 'inactive' : 'active';
-                document.getElementById('bannerOrder').value = banner.display_order ?? 0;
 
 
                 
@@ -779,7 +828,6 @@ $apiUrl = '../api/homepage-banners.php';
                 const buttonText = document.getElementById('bannerButtonText').value.trim();
                 const buttonLink = document.getElementById('bannerButtonLink').value.trim();
                 const status = document.getElementById('bannerStatus').value;
-                const displayOrder = parseInt(document.getElementById('bannerOrder').value || '0', 10);
                 const useDeviceImages = useDeviceImagesCheckbox.checked ? 1 : 0;
                 const startAt = null;
                 const endAt = null;
@@ -843,7 +891,6 @@ $apiUrl = '../api/homepage-banners.php';
                     button_text: buttonText,
                     button_link: buttonLink,
                     status,
-                    display_order: isNaN(displayOrder) ? 0 : displayOrder,
                     start_at: startAt,
                     end_at: endAt
                 };
@@ -917,132 +964,13 @@ $apiUrl = '../api/homepage-banners.php';
 
         // (Export/Import removed per request)
 
-        // Display settings (saved in settings table)
-        function showDisplaySettingsMsg(text, type) {
-            const el = document.getElementById('displaySettingsMsg');
-            if (!el) return;
-            el.style.display = 'block';
-            el.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
-            el.style.color = type === 'success' ? '#155724' : '#721c24';
-            el.textContent = text;
-        }
-
-        async function saveSetting(key, value) {
-            const res = await fetch(settingsApiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key, value })
-            });
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error || data.message || 'Failed saving setting');
-        }
-
-        async function loadDisplaySettings() {
-            try {
-                const res = await fetch(settingsApiUrl);
-                const data = await res.json();
-                if (!data.success) return;
-                bannerDisplaySettings.autoplay = String(data.data.homepage_banner_autoplay || '0') === '1';
-                bannerDisplaySettings.duration = parseInt(data.data.homepage_banner_duration || '5', 10) || 5;
-                bannerDisplaySettings.height = parseInt(data.data.homepage_banner_height || '260', 10) || 260;
-                bannerDisplaySettings.animation = (data.data.homepage_banner_animation || 'slide') === 'fade' ? 'fade' : 'slide';
-
-                document.getElementById('bannerAutoplay').checked = bannerDisplaySettings.autoplay;
-                document.getElementById('bannerDuration').value = bannerDisplaySettings.duration;
-                document.getElementById('bannerHeight').value = bannerDisplaySettings.height;
-                document.getElementById('bannerAnimation').value = bannerDisplaySettings.animation;
-
-                renderPreviews();
-            } catch (e) {}
-        }
-
-        document.getElementById('displaySettingsForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            try {
-                bannerDisplaySettings.autoplay = !!document.getElementById('bannerAutoplay').checked;
-                bannerDisplaySettings.duration = parseInt(document.getElementById('bannerDuration').value || '5', 10) || 5;
-                bannerDisplaySettings.height = parseInt(document.getElementById('bannerHeight').value || '260', 10) || 260;
-                bannerDisplaySettings.animation = document.getElementById('bannerAnimation').value === 'fade' ? 'fade' : 'slide';
-
-                await saveSetting('homepage_banner_autoplay', bannerDisplaySettings.autoplay ? '1' : '0');
-                await saveSetting('homepage_banner_duration', String(bannerDisplaySettings.duration));
-                await saveSetting('homepage_banner_height', String(bannerDisplaySettings.height));
-                await saveSetting('homepage_banner_animation', bannerDisplaySettings.animation);
-
-                showDisplaySettingsMsg('Display settings saved!', 'success');
-                renderPreviews();
-            } catch (err) {
-                showDisplaySettingsMsg('Error: ' + (err.message || err), 'error');
-            }
-        });
-
-        // Preview renderer (simple 1-column slider)
-        let previewIndex = 0;
-        let previewTimer = null;
-
-        function getBestImageForPreview(b, isMobile) {
-            const useDevice = Number(b.use_device_images || 0) === 1;
-            if (useDevice) {
-                const candidate = isMobile ? (b.image_path_mobile || '') : (b.image_path_desktop || '');
-                if (candidate) return candidate;
-            }
-            return b.image_path || '';
-        }
-
-        function renderPreviewInto(el, isMobile) {
-            if (!el) return;
-            const list = bannersCache || [];
-            const b = list.length ? list[Math.min(previewIndex, list.length - 1)] : null;
-            const height = Math.max(120, Number(bannerDisplaySettings.height || 260));
-            if (!b) {
-                el.innerHTML = `<div style="padding:20px; color:#fff;">No banners to preview.</div>`;
-                return;
-            }
-            const img = escapeHtml(getBestImageForPreview(b, isMobile));
-            const title = escapeHtml(b.title || '');
-            const subtitle = escapeHtml(b.subtitle || '');
-            el.innerHTML = `
-              <div style="position:relative; height:${height}px; overflow:hidden;">
-                <img src="${img}" alt="${title}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;">
-                <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.78) 100%);"></div>
-                <div style="position:absolute; left:14px; right:14px; bottom:12px; color:#fff;">
-                  <div style="font-weight:900; font-size:${isMobile ? '18px' : '22px'}; line-height:1.15; text-shadow:0 2px 10px rgba(0,0,0,0.45);">${title}</div>
-                  ${subtitle ? `<div style="margin-top:6px; font-weight:700; opacity:0.95;">${subtitle}</div>` : ''}
-                </div>
-              </div>
-            `;
-        }
-
-        function renderPreviews() {
-            const desktop = document.getElementById('previewDesktop');
-            const mobile = document.getElementById('previewMobile');
-            // Clamp index
-            if (!bannersCache || bannersCache.length === 0) previewIndex = 0;
-            else previewIndex = Math.max(0, Math.min(previewIndex, bannersCache.length - 1));
-            renderPreviewInto(desktop, false);
-            renderPreviewInto(mobile, true);
-
-            if (previewTimer) {
-                clearInterval(previewTimer);
-                previewTimer = null;
-            }
-            if (bannerDisplaySettings.autoplay && bannersCache && bannersCache.length > 1) {
-                previewTimer = setInterval(() => nextPreview(true), Math.max(1000, (bannerDisplaySettings.duration || 5) * 1000));
-            }
-        }
-
-        function nextPreview(fromTimer = false) {
-            if (!bannersCache || bannersCache.length === 0) return;
-            previewIndex = (previewIndex + 1) % bannersCache.length;
-            renderPreviews();
-        }
-        
         document.getElementById('bannerModal').addEventListener('click', function(e) {
             if (e.target === this) closeBannerModal();
         });
 
         // Initial loads
-        loadDisplaySettings();
+        attachProductAutocomplete('bannerLinkUrl', 'bannerLinkSuggestions');
+        attachProductAutocomplete('bannerButtonLink', 'bannerButtonLinkSuggestions');
         loadBanners();
     </script>
 </body>

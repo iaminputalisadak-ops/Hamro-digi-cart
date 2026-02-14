@@ -9,7 +9,8 @@ const SEO = ({
   image, 
   type = 'website',
   structuredData,
-  canonicalUrl 
+  canonicalUrl,
+  robots = 'index, follow'
 }) => {
   const location = useLocation();
   // Use environment variable or default to production domain
@@ -48,7 +49,7 @@ const SEO = ({
       <meta name="twitter:image" content={seoImage} />
 
       {/* Additional SEO */}
-      <meta name="robots" content="index, follow" />
+      <meta name="robots" content={robots} />
       <meta name="language" content="English" />
       <meta name="author" content="Hamro Digi Cart" />
       <meta name="geo.region" content="NP" />

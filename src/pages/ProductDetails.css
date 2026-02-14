@@ -368,11 +368,48 @@
   margin: 0 0 1rem 0;
 }
 
-.product-description-section p {
+.product-description-content {
   color: #4b5563;
   line-height: 1.8;
   font-size: 1rem;
   margin: 0;
+}
+
+/* When description is plain text (non-HTML), preserve new lines/spaces */
+.product-description-prewrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* CKEditor (HTML) content styling */
+.product-description-content p {
+  margin: 0 0 1rem 0;
+}
+
+.product-description-content p:last-child {
+  margin-bottom: 0;
+}
+
+.product-description-content ul,
+.product-description-content ol {
+  margin: 0 0 1rem 1.25rem;
+  padding: 0;
+}
+
+.product-description-content li {
+  margin: 0.25rem 0;
+}
+
+.product-description-content a {
+  color: #16a34a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.product-description-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
 }
 
 /* Right Sidebar */
@@ -706,7 +743,7 @@
     margin-bottom: 0.75rem;
   }
 
-  .product-description-section p {
+  .product-description-content {
     font-size: 0.9rem;
     line-height: 1.6;
   }

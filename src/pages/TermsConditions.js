@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SEO from '../components/SEO';
 import { fetchPageByKey } from '../utils/pageService';
 import './PageTemplate.css';
 
@@ -110,6 +111,11 @@ const TermsConditions = () => {
   if (loading) {
     return (
       <div className="page-template">
+        <SEO
+          title="Terms & Conditions"
+          description="Read the terms and conditions for using Hamro Digi Cart."
+          keywords="terms, conditions, hamro digi cart, digital products"
+        />
         <div className="page-container">
           <div className="page-loading">Loading...</div>
         </div>
@@ -119,8 +125,13 @@ const TermsConditions = () => {
 
   return (
     <div className="page-template">
+      <SEO
+        title="Terms & Conditions"
+        description="Read the terms and conditions for using Hamro Digi Cart."
+        keywords="terms, conditions, hamro digi cart, digital products"
+      />
       <div className="page-container">
-        <div className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
+        <article className="page-content" dangerouslySetInnerHTML={{ __html: content }} />
       </div>
     </div>
   );

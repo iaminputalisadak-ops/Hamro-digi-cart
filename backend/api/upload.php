@@ -39,19 +39,30 @@ try {
     $result = uploadFile($_FILES['file']);
     
     if ($result['success']) {
-        // Get the base URL
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'];
-        $baseUrl = $protocol . '://' . $host;
-        
-        // Return full URL for the uploaded file
-        $fullUrl = $baseUrl . $result['path'];
+        // Prefer returning a root-relative URL to avoid cPanel/proxy scheme issues (http vs https).
+        // The frontend/admin can resolve this against window.location.origin.
+        $relativeUrl = $result['path'];
+
+        // Best-effort absolute URL (kept for backward compatibility / debugging)
+        $scheme = 'http';
+        if (
+            (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+            (!empty($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
+            (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
+            (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) === 'on')
+        ) {
+            $scheme = 'https';
+        }
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        $absoluteUrl = ($host ? ($scheme . '://' . $host . $relativeUrl) : $relativeUrl);
         
         ob_end_clean();
         sendSuccess([
             'filename' => $result['filename'],
-            'url' => $fullUrl,
-            'path' => $result['path']
+            // Keep existing key name expected by admin.js: now root-relative for portability
+            'url' => $relativeUrl,
+            'path' => $relativeUrl,
+            'absolute_url' => $absoluteUrl
         ], 'File uploaded successfully');
     } else {
         ob_end_clean();
