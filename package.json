@@ -26,7 +26,6 @@
     "dev": "concurrently -k -n BACKEND,FRONTEND -c green,cyan \"npm run backend\" \"npm start\"",
     "dev:3001": "concurrently -k -n BACKEND,FRONTEND -c green,cyan \"npm run backend\" \"npm run start:3001\"",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 react-scripts build",
-    "deploy:ssh": "node scripts/deploy-ssh.mjs",
     "optimize:images": "node scripts/optimize-images.mjs backend/uploads",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

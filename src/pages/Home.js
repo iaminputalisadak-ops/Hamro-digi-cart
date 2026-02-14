@@ -418,6 +418,11 @@ const Home = () => {
 
   return (
     <div className="home-page">
+      {/* DEPLOY TEST - remove after verifying */}
+      <div style={{ background: 'linear-gradient(90deg, #15803d, #16a34a)', color: 'white', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '15px' }}>
+        <img src="https://picsum.photos/seed/deploytest2025/80/40" alt="Deploy check" style={{ borderRadius: '6px', border: '2px solid white' }} />
+        <span>✓ Latest deploy – you are seeing the new version</span>
+      </div>
       <SEO
         title={settings?.website_title || 'Hamro Digi Cart'}
         description={settings?.website_description || settings?.website_tagline || 'Buy premium digital products, reels bundles, templates, and more. Instant download and lifetime access.'}
